@@ -5,12 +5,18 @@ import { useAppStore } from "@/stores/app-store";
 
 export function SystemBar() {
   const user = useAppStore((s) => s.user);
+  const guest = useAppStore((s) => s.guest);
   const activeProcesses = useAppStore((s) => s.activeProcesses);
   const toggleSidebar = useAppStore((s) => s.toggleSidebar);
   const botUsername = useAppStore((s) => s.telegramBotUsername);
 
-  const displayName =
-    user?.username ? `@${user.username}` : user?.firstName ?? "GUEST";
+  const displayName = user
+    ? user.username
+      ? `@${user.username}`
+      : user.firstName ?? "OPERATOR"
+    : guest
+      ? `GUEST (${guest.searchesRemaining}/${guest.searchesLimit})`
+      : "GUEST";
 
   return (
     <header className="flex h-10 shrink-0 items-center justify-between border-b border-[var(--border)] bg-[var(--bg-panel)] px-3 text-xs">
@@ -33,7 +39,7 @@ export function SystemBar() {
           <span className="text-[var(--text-primary)]">{activeProcesses}</span>
         </span>
         <span className="text-[var(--text-primary)]">{displayName}</span>
-        {!user && botUsername ? (
+        {!user && !guest && botUsername ? (
           <TelegramLogin botUsername={botUsername} />
         ) : null}
       </div>

@@ -41,3 +41,51 @@ export interface CaAnalysisResult {
   fetchedAt: string;
   cached: boolean;
 }
+
+export interface FundOrigin {
+  source: string;
+  sourceAddress: string | null;
+  timestamp: string | null;
+  hops: number;
+  flags: string[];
+}
+
+export interface TokenTrade {
+  type: "BUY" | "SELL" | "TRANSFER_IN" | "TRANSFER_OUT";
+  timestamp: string;
+  tokenAmount: number;
+  ethAmount: number | null;
+  priceUsd: number | null;
+  txHash: string;
+}
+
+export interface PortfolioHolding {
+  address: string;
+  symbol: string;
+  name: string;
+  balance: number;
+  usdValue: number | null;
+}
+
+export interface WalletPnl {
+  averageEntryUsd: number | null;
+  currentPriceUsd: number | null;
+  position: number;
+  unrealizedPnlUsd: number | null;
+  unrealizedPnlPercent: number | null;
+  realizedPnlUsd: number | null;
+  status: "OPEN" | "EXITED" | "AIRDROP" | "UNKNOWN";
+}
+
+export interface WalletProfile {
+  walletAddress: string;
+  contractAddress: string;
+  fundOrigin: FundOrigin;
+  trades: TokenTrade[];
+  portfolio: PortfolioHolding[];
+  pnl: WalletPnl;
+  behaviorLabel: string;
+  behaviorConfidence: "LOW" | "MEDIUM" | "HIGH";
+  fetchedAt: string;
+  cached: boolean;
+}

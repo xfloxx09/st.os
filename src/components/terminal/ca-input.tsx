@@ -19,6 +19,7 @@ export function CaInput() {
   const setSearchHistory = useAppStore((s) => s.setSearchHistory);
   const setLastQueryMs = useAppStore((s) => s.setLastQueryMs);
   const setAnalyzeError = useAppStore((s) => s.setAnalyzeError);
+  const setGuest = useAppStore((s) => s.setGuest);
 
   const submit = async (address: string) => {
     const trimmed = address.trim();
@@ -44,11 +45,21 @@ export function CaInput() {
 
       const result = data as CaAnalysisResult & {
         searchHistory: SearchHistoryItem[];
+        guest?: {
+          guestId: string;
+          searchesUsed: number;
+          searchesRemaining: number;
+          searchesLimit: number;
+        };
       };
+
+      if (result.guest) {
+        setGuest(result.guest);
+      }
 
       setAnalysis(result.contractAddress, result);
       openAnalysisPanels(result.contractAddress);
-      setSearchHistory(result.searchHistory);
+      setSearchHistory(result.searchHistory ?? []);
       setLastQueryMs(elapsedMs(start));
       setValue("");
     } catch (err) {

@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { analyzeContractAddress } from "@/lib/analyze/ca-analyzer";
 import type { CaAnalysisResult } from "@/lib/analyze/types";
-import { getSessionFromCookies } from "@/lib/auth/jwt";
+import { incrementGuestSearches } from "@/lib/auth/guest";
+import { getAuthSession } from "@/lib/auth/session";
 import {
   getCachedWalletData,
   setCachedWalletData,
@@ -11,7 +12,7 @@ import { checkRateLimit } from "@/lib/rate-limit";
 import { getSearchHistory, recordSearch } from "@/lib/search-history";
 
 export async function GET(request: NextRequest) {
-  const session = await getSessionFromCookies();
+  const session = await getAuthSession();
   if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -27,12 +28,23 @@ export async function GET(request: NextRequest) {
   const normalized = normalizeAddress(address);
   const skipCache = request.nextUrl.searchParams.get("refresh") === "1";
 
-  const rate = await checkRateLimit(session.userId, "analyze_ca");
-  if (!rate.allowed) {
-    return NextResponse.json(
-      { error: "Rate limit exceeded. Try again later." },
-      { status: 429 }
-    );
+  if (session.type === "guest") {
+    if (session.searchesRemaining <= 0) {
+      return NextResponse.json(
+        {
+          error: "Guest search limit reached (5). Connect Telegram for unlimited access.",
+        },
+        { status: 429 }
+      );
+    }
+  } else {
+    const rate = await checkRateLimit(session.userId, "analyze_ca");
+    if (!rate.allowed) {
+      return NextResponse.json(
+        { error: "Rate limit exceeded. Try again later." },
+        { status: 429 }
+      );
+    }
   }
 
   let result: CaAnalysisResult | null = null;
@@ -57,24 +69,43 @@ export async function GET(request: NextRequest) {
     result = { ...result, cached: true };
   }
 
-  await recordSearch(
-    session.userId,
-    normalized,
-    result.overview.symbol,
-    result.overview.name
-  );
+  let guestMeta = null;
+  let searchHistory: Array<{
+    id: number;
+    contractAddress: string;
+    tokenSymbol: string | null;
+    tokenName: string | null;
+    searchedAt: string;
+  }> = [];
 
-  const history = await getSearchHistory(session.userId);
-
-  return NextResponse.json({
-    ...result,
-    rateLimitRemaining: rate.remaining,
-    searchHistory: history.map((row) => ({
+  if (session.type === "guest") {
+    const used = await incrementGuestSearches(session.guestId);
+    guestMeta = {
+      guestId: session.guestId,
+      searchesUsed: used,
+      searchesRemaining: Math.max(0, 5 - used),
+      searchesLimit: 5,
+    };
+  } else {
+    await recordSearch(
+      session.userId,
+      normalized,
+      result.overview.symbol,
+      result.overview.name
+    );
+    const history = await getSearchHistory(session.userId);
+    searchHistory = history.map((row) => ({
       id: row.id,
       contractAddress: row.contract_address,
       tokenSymbol: row.token_symbol,
       tokenName: row.token_name,
       searchedAt: row.searched_at.toISOString(),
-    })),
+    }));
+  }
+
+  return NextResponse.json({
+    ...result,
+    guest: guestMeta,
+    searchHistory,
   });
 }

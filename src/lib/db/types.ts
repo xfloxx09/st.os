@@ -7,6 +7,7 @@ export interface Database {
   wallet_cache: WalletCacheTable;
   rate_limits: RateLimitsTable;
   schema_migrations: SchemaMigrationsTable;
+  guest_sessions: GuestSessionsTable;
 }
 
 export interface UsersTable {
@@ -57,6 +58,13 @@ export interface SchemaMigrationsTable {
   id: Generated<number>;
   filename: string;
   applied_at: Generated<Date>;
+}
+
+export interface GuestSessionsTable {
+  id: string;
+  search_count: Generated<number>;
+  created_at: Generated<Date>;
+  expires_at: Date;
 }
 
 export type User = Selectable<UsersTable>;

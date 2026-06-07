@@ -27,6 +27,7 @@ interface TelegramLoginProps {
 export function TelegramLogin({ botUsername, onSuccess }: TelegramLoginProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const setUser = useAppStore((s) => s.setUser);
+  const setGuest = useAppStore((s) => s.setGuest);
   const setSearchHistory = useAppStore((s) => s.setSearchHistory);
 
   useEffect(() => {
@@ -48,6 +49,7 @@ export function TelegramLogin({ botUsername, onSuccess }: TelegramLoginProps) {
         };
       };
 
+      setGuest(null);
       setUser(data.user);
 
       const sessionRes = await fetch("/api/auth/session");
@@ -83,7 +85,7 @@ export function TelegramLogin({ botUsername, onSuccess }: TelegramLoginProps) {
     return () => {
       delete window.onTelegramAuth;
     };
-  }, [botUsername, onSuccess, setSearchHistory, setUser]);
+  }, [botUsername, onSuccess, setGuest, setSearchHistory, setUser]);
 
   return <div ref={containerRef} className="telegram-login" />;
 }

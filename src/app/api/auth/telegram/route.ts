@@ -2,9 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import {
   SESSION_COOKIE,
-  createSessionToken,
-  sessionExpiryDate,
-} from "@/lib/auth/jwt";
+  createUserSessionToken,
+  userSessionExpiryDate,
+} from "@/lib/auth/session";
 import {
   verifyTelegramAuth,
   type TelegramAuthPayload,
@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
     userId = inserted.id;
   }
 
-  const token = await createSessionToken({
+  const token = await createUserSessionToken({
     sub: String(body.id),
     userId,
     telegramId: body.id,
@@ -69,7 +69,7 @@ export async function POST(request: NextRequest) {
     firstName: body.first_name,
   });
 
-  const expiresAt = sessionExpiryDate();
+  const expiresAt = userSessionExpiryDate();
 
   await db
     .insertInto("sessions")

@@ -71,7 +71,12 @@ Open [http://localhost:3000](http://localhost:3000).
 - Search history (max 20, clickable sidebar)
 - TTL caching + rate limits on `/api/analyze/ca`
 
-**Not yet implemented:** Wallet STALK deep dive, cross-holder engine (Phases 2–3).
+**Phase 2 (partial)**
+- Guest mode: 5 CA searches without Telegram
+- Wallet STALK panel: fund origin, token trades, PNL estimate, portfolio (Alchemy)
+- STALK button enabled for Telegram users
+
+**Not yet implemented:** Cross-holder analysis engine (Phase 3).
 
 ### Phase 1 env vars
 

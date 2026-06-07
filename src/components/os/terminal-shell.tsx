@@ -12,6 +12,7 @@ import { useAppStore } from "@/stores/app-store";
 export function TerminalShell() {
   const [showBoot, setShowBoot] = useState(true);
   const setUser = useAppStore((s) => s.setUser);
+  const setGuest = useAppStore((s) => s.setGuest);
   const setSearchHistory = useAppStore((s) => s.setSearchHistory);
   const setTelegramBotUsername = useAppStore((s) => s.setTelegramBotUsername);
   const bootComplete = useAppStore((s) => s.bootComplete);
@@ -33,21 +34,7 @@ export function TerminalShell() {
     queryFn: async () => {
       const res = await fetch("/api/auth/session");
       if (!res.ok) return null;
-      return res.json() as Promise<{
-        user: {
-          userId: number;
-          telegramId: number;
-          username?: string;
-          firstName?: string;
-        };
-        searchHistory: Array<{
-          id: number;
-          contractAddress: string;
-          tokenSymbol: string | null;
-          tokenName: string | null;
-          searchedAt: string;
-        }>;
-      }>;
+      return res.json();
     },
     enabled: bootComplete,
   });
@@ -59,11 +46,21 @@ export function TerminalShell() {
   }, [configQuery.data, setTelegramBotUsername]);
 
   useEffect(() => {
-    if (sessionQuery.data) {
-      setUser(sessionQuery.data.user);
-      setSearchHistory(sessionQuery.data.searchHistory);
+    if (!sessionQuery.data?.authenticated) return;
+
+    if (sessionQuery.data.guest) {
+      setGuest(sessionQuery.data.guest);
+      setUser(null);
+      setSearchHistory([]);
+      return;
     }
-  }, [sessionQuery.data, setSearchHistory, setUser]);
+
+    if (sessionQuery.data.user) {
+      setUser(sessionQuery.data.user);
+      setGuest(null);
+      setSearchHistory(sessionQuery.data.searchHistory ?? []);
+    }
+  }, [sessionQuery.data, setGuest, setSearchHistory, setUser]);
 
   return (
     <div className="flex h-screen flex-col overflow-hidden">

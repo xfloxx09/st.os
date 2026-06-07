@@ -1,16 +1,70 @@
 "use client";
 
+import { useState } from "react";
 import type { HolderEntry } from "@/lib/analyze/types";
 import { formatUsd, truncateAddress } from "@/lib/ethereum";
+import { elapsedMs, startTimer } from "@/lib/timing";
+import {
+  useAppStore,
+  walletProfileKey,
+} from "@/stores/app-store";
+import type { WalletProfile } from "@/lib/analyze/types";
 
 export function HolderRosterPanel({
   holders,
   allHolders,
+  contractAddress,
 }: {
   holders: HolderEntry[];
   allHolders: HolderEntry[];
+  contractAddress: string;
 }) {
+  const [loadingWallet, setLoadingWallet] = useState<string | null>(null);
+  const guest = useAppStore((s) => s.guest);
+  const user = useAppStore((s) => s.user);
+  const openWalletPanel = useAppStore((s) => s.openWalletPanel);
+  const setWalletProfile = useAppStore((s) => s.setWalletProfile);
+  const setActiveProcesses = useAppStore((s) => s.setActiveProcesses);
+  const setAnalyzeError = useAppStore((s) => s.setAnalyzeError);
+
   const excludedCount = allHolders.length - holders.length;
+  const canStalk = Boolean(user);
+
+  const onStalk = async (holder: HolderEntry) => {
+    if (!canStalk) {
+      setAnalyzeError("Connect Telegram to STALK wallets.");
+      return;
+    }
+
+    setLoadingWallet(holder.address);
+    setAnalyzeError(null);
+    setActiveProcesses(useAppStore.getState().activeProcesses + 1);
+    const start = startTimer();
+
+    try {
+      const params = new URLSearchParams({
+        wallet: holder.address,
+        contract: contractAddress,
+        percent: String(holder.percentOfSupply),
+      });
+      const res = await fetch(`/api/analyze/wallet?${params}`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "STALK failed");
+
+      const profile = data as WalletProfile;
+      const key = walletProfileKey(holder.address, contractAddress);
+      setWalletProfile(key, profile);
+      openWalletPanel(holder.address, contractAddress, holder.rank);
+      useAppStore.getState().setLastQueryMs(elapsedMs(start));
+    } catch (err) {
+      setAnalyzeError(err instanceof Error ? err.message : "STALK failed");
+    } finally {
+      setLoadingWallet(null);
+      setActiveProcesses(
+        Math.max(0, useAppStore.getState().activeProcesses - 1)
+      );
+    }
+  };
 
   return (
     <div className="space-y-3 text-[11px]">
@@ -19,7 +73,11 @@ export function HolderRosterPanel({
           {holders.length} ANALYZABLE HOLDERS
           {excludedCount > 0 ? ` · ${excludedCount} filtered (CEX/DEX/burn)` : ""}
         </span>
-        <span className="text-[var(--accent)]">STALK → Phase 2</span>
+        {guest ? (
+          <span className="text-[var(--warning)]">STALK REQUIRES TELEGRAM</span>
+        ) : (
+          <span className="text-[var(--accent)]">CLICK STALK TO PROFILE</span>
+        )}
       </div>
 
       <div className="max-h-[300px] overflow-auto os-scrollbar">
@@ -37,7 +95,7 @@ export function HolderRosterPanel({
             {holders.length === 0 ? (
               <tr>
                 <td colSpan={5} className="py-6 text-center text-[var(--text-secondary)]">
-                  No analyzable holders found. All top addresses are pools/CEX.
+                  No analyzable holders found.
                 </td>
               </tr>
             ) : (
@@ -53,11 +111,6 @@ export function HolderRosterPanel({
                     <div className="text-[var(--text-primary)]">
                       {holder.label ?? truncateAddress(holder.address)}
                     </div>
-                    {holder.label ? (
-                      <div className="text-[10px] text-[var(--text-secondary)]">
-                        {truncateAddress(holder.address)}
-                      </div>
-                    ) : null}
                   </td>
                   <td className="py-1.5 pr-2 text-right">
                     {holder.percentOfSupply.toFixed(2)}%
@@ -68,11 +121,11 @@ export function HolderRosterPanel({
                   <td className="py-1.5 text-right">
                     <button
                       type="button"
-                      disabled
-                      title="Wallet deep dive ships in Phase 2"
-                      className="border border-[var(--border)] px-2 py-0.5 text-[10px] text-[var(--text-secondary)]"
+                      onClick={() => void onStalk(holder)}
+                      disabled={!canStalk || loadingWallet === holder.address}
+                      className="border border-[var(--accent)] px-2 py-0.5 text-[10px] text-[var(--accent)] hover:bg-[var(--accent)] hover:text-[var(--bg)] disabled:opacity-40"
                     >
-                      STALK
+                      {loadingWallet === holder.address ? "..." : "STALK"}
                     </button>
                   </td>
                 </tr>
@@ -81,23 +134,6 @@ export function HolderRosterPanel({
           </tbody>
         </table>
       </div>
-
-      {excludedCount > 0 ? (
-        <details className="text-[10px] text-[var(--text-secondary)]">
-          <summary className="cursor-pointer text-[var(--warning)]">
-            Show {excludedCount} filtered addresses
-          </summary>
-          <ul className="mt-2 space-y-1">
-            {allHolders
-              .filter((h) => h.excluded)
-              .map((h) => (
-                <li key={h.address}>
-                  {h.label ?? truncateAddress(h.address)} — {h.percentOfSupply.toFixed(2)}%
-                </li>
-              ))}
-          </ul>
-        </details>
-      ) : null}
     </div>
   );
 }

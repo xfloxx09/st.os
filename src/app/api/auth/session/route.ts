@@ -1,21 +1,32 @@
 import { NextResponse } from "next/server";
-import { getSessionFromCookies, SESSION_COOKIE } from "@/lib/auth/jwt";
+import { deleteGuestSession } from "@/lib/auth/guest";
+import {
+  getAuthSession,
+  SESSION_COOKIE,
+} from "@/lib/auth/session";
 import { getDb } from "@/lib/db";
+import { getSearchHistory } from "@/lib/search-history";
 
 export async function GET() {
-  const session = await getSessionFromCookies();
+  const session = await getAuthSession();
   if (!session) {
     return NextResponse.json({ authenticated: false }, { status: 401 });
   }
 
-  const db = getDb();
-  const history = await db
-    .selectFrom("search_history")
-    .select(["id", "contract_address", "token_symbol", "token_name", "searched_at"])
-    .where("user_id", "=", session.userId)
-    .orderBy("searched_at", "desc")
-    .limit(20)
-    .execute();
+  if (session.type === "guest") {
+    return NextResponse.json({
+      authenticated: true,
+      guest: {
+        guestId: session.guestId,
+        searchesUsed: session.searchesUsed,
+        searchesRemaining: session.searchesRemaining,
+        searchesLimit: session.searchesLimit,
+      },
+      searchHistory: [],
+    });
+  }
+
+  const history = await getSearchHistory(session.userId);
 
   return NextResponse.json({
     authenticated: true,
@@ -36,14 +47,17 @@ export async function GET() {
 }
 
 export async function DELETE() {
-  const session = await getSessionFromCookies();
-  if (session) {
+  const session = await getAuthSession();
+  const cookieStore = await import("next/headers").then((m) => m.cookies());
+  const token = cookieStore.get(SESSION_COOKIE)?.value;
+
+  if (session?.type === "user" && token) {
     const db = getDb();
-    const cookieStore = await import("next/headers").then((m) => m.cookies());
-    const token = cookieStore.get(SESSION_COOKIE)?.value;
-    if (token) {
-      await db.deleteFrom("sessions").where("token", "=", token).execute();
-    }
+    await db.deleteFrom("sessions").where("token", "=", token).execute();
+  }
+
+  if (session?.type === "guest") {
+    await deleteGuestSession(session.guestId);
   }
 
   const response = NextResponse.json({ ok: true });
