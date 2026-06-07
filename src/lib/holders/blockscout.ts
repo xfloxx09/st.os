@@ -1,6 +1,7 @@
 import { normalizeAddress } from "@/lib/ethereum";
 
 const BASE_URL = "https://eth.blockscout.com/api/v2";
+const PAGE_SIZE = 50;
 
 export interface RawHolder {
   address: string;
@@ -17,12 +18,12 @@ interface BlockscoutHolderItem {
       tags?: Array<{ name: string; tagType?: string }>;
     };
   };
-  value: string;
+  value: string | number;
 }
 
 interface BlockscoutHoldersResponse {
   items: BlockscoutHolderItem[];
-  next_page_params?: Record<string, unknown> | null;
+  next_page_params?: Record<string, string | number> | null;
 }
 
 function extractLabel(item: BlockscoutHolderItem): string | null {
@@ -31,19 +32,29 @@ function extractLabel(item: BlockscoutHolderItem): string | null {
   return named?.name ?? null;
 }
 
+function quantityFromValue(value: string | number | undefined): string {
+  if (value == null) return "0";
+  if (typeof value === "string") return value.trim() || "0";
+  if (!Number.isFinite(value) || value === 0) return "0";
+  return String(Math.trunc(value));
+}
+
 export async function fetchBlockscoutHolders(
   contractAddress: string,
-  limit = 100
+  limit = 500
 ): Promise<RawHolder[]> {
   const holders: RawHolder[] = [];
-  let cursor: string | null = null;
+  const seen = new Set<string>();
+  let nextParams: Record<string, string> | null = null;
 
   while (holders.length < limit) {
     const url = new URL(
       `${BASE_URL}/tokens/${normalizeAddress(contractAddress)}/holders`
     );
-    if (cursor) {
-      url.searchParams.set("address_hash", cursor);
+    if (nextParams) {
+      for (const [key, value] of Object.entries(nextParams)) {
+        url.searchParams.set(key, value);
+      }
     }
 
     const res = await fetch(url.toString(), { next: { revalidate: 0 } });
@@ -54,19 +65,35 @@ export async function fetchBlockscoutHolders(
     if (items.length === 0) break;
 
     for (const item of items) {
+      const address = normalizeAddress(item.address.hash);
+      if (seen.has(address)) continue;
+      seen.add(address);
+
       holders.push({
-        address: normalizeAddress(item.address.hash),
-        quantity: item.value,
+        address,
+        quantity: quantityFromValue(item.value),
         label: extractLabel(item),
         isContract: item.address.is_contract,
       });
       if (holders.length >= limit) break;
     }
 
-    const nextHash = json.next_page_params?.address_hash;
-    if (typeof nextHash !== "string" || nextHash === cursor) break;
-    cursor = nextHash;
+    if (!json.next_page_params || holders.length >= limit) break;
+
+    nextParams = {};
+    for (const [key, value] of Object.entries(json.next_page_params)) {
+      if (value != null) nextParams[key] = String(value);
+    }
+    if (Object.keys(nextParams).length === 0) break;
   }
 
   return holders;
+}
+
+export async function fetchAllBlockscoutHolders(
+  contractAddress: string,
+  maxHolders = 500
+): Promise<{ holders: RawHolder[]; capped: boolean }> {
+  const holders = await fetchBlockscoutHolders(contractAddress, maxHolders);
+  return { holders, capped: holders.length >= maxHolders };
 }

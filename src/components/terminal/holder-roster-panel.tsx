@@ -56,6 +56,8 @@ export function HolderRosterPanel({
     filtered: number;
     warning?: string;
     proRequired?: boolean;
+    capped?: boolean;
+    maxFetched?: number;
   };
 }) {
   const [tab, setTab] = useState<Tab>("holders");
@@ -264,7 +266,11 @@ export function HolderRosterPanel({
         <>
           <div className="flex items-center justify-between gap-2 text-[10px] text-[var(--text-secondary)]">
             <span>
-              {holders.length} holders · {excludedCount} filtered
+              {holders.length} holders
+              {holdersMeta?.capped
+                ? ` (top ${holdersMeta.maxFetched ?? holders.length})`
+                : ""}
+              {excludedCount > 0 ? ` · ${excludedCount} filtered` : ""}
               {holdersMeta ? ` · ${holdersMeta.source}` : ""}
             </span>
             {clickHint}

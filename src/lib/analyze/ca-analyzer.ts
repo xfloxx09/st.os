@@ -13,6 +13,7 @@ import {
 import { normalizeAddress } from "@/lib/ethereum";
 import type { CaAnalysisResult, HolderEntry, RiskFlag, TokenOverview } from "@/lib/analyze/types";
 import {
+  parseRawTokenAmount,
   percentOfRawSupply,
   rawToHuman,
   resolveTotalSupplyRaw,
@@ -72,17 +73,21 @@ export async function analyzeContractAddress(
       fetchContractCreation(address).catch(() => null),
       fetchContractSource(address).catch(() => null),
       checkHoneypot(address),
-      fetchTopHolders(address, 100, { isPro: options?.isPro }).catch(() => ({
+      fetchTopHolders(address, 500, { isPro: options?.isPro }).catch(() => ({
         holders: [],
         source: "blockscout" as const,
         warning: "Failed to fetch holders",
         proRequired: false,
+        capped: false,
+        maxFetched: 0,
       })),
     ]);
 
-  const rawHolders = holderResult.holders;
-
   const decimals = Number(tokenInfo?.divisor ?? "18");
+
+  const rawHolders = holderResult.holders.filter(
+    (holder) => parseRawTokenAmount(holder.quantity, decimals) > BigInt(0)
+  );
   const priceUsd = dex?.priceUsd ? Number(dex.priceUsd) : null;
   const totalSupplyRaw = resolveTotalSupplyRaw(
     tokenInfo?.totalSupply,
@@ -158,6 +163,8 @@ export async function analyzeContractAddress(
       filtered: allHolders.length - holders.length,
       warning: holderResult.warning,
       proRequired: holderResult.proRequired,
+      capped: holderResult.capped,
+      maxFetched: holderResult.maxFetched,
     },
     fetchedAt: new Date().toISOString(),
     cached: false,

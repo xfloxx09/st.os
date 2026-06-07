@@ -40,6 +40,8 @@ export interface HoldersMeta {
   filtered: number;
   warning?: string;
   proRequired?: boolean;
+  capped?: boolean;
+  maxFetched?: number;
 }
 
 export interface CaAnalysisResult {

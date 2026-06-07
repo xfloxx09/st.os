@@ -109,6 +109,25 @@ export async function fetchTokenHolders(
   });
 }
 
+export async function fetchAllTokenHolders(
+  contractAddress: string,
+  maxHolders = 2500,
+  pageSize = 100
+): Promise<EtherscanHolder[]> {
+  const all: EtherscanHolder[] = [];
+  let page = 1;
+
+  while (all.length < maxHolders) {
+    const batch = await fetchTokenHolders(contractAddress, page, pageSize);
+    if (!batch.length) break;
+    all.push(...batch);
+    if (batch.length < pageSize) break;
+    page += 1;
+  }
+
+  return all.slice(0, maxHolders);
+}
+
 export async function fetchContractCreation(
   contractAddress: string
 ): Promise<ContractCreation | null> {
