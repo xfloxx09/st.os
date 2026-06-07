@@ -12,7 +12,7 @@ export function WalletProfilePanel({ profile }: { profile: WalletProfile }) {
             {truncateAddress(profile.walletAddress, 6)}
           </div>
           <div className="text-[10px] text-[var(--text-secondary)]">
-            STALKING FOR {profile.contractAddress.slice(0, 10)}...
+            ANALYZING {profile.contractAddress.slice(0, 10)}...
           </div>
         </div>
         <div className="text-right">

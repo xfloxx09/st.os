@@ -99,3 +99,37 @@ export interface WalletProfile {
   fetchedAt: string;
   cached: boolean;
 }
+
+export interface WalletRatingFactor {
+  label: string;
+  impact: number;
+  detail: string;
+}
+
+export interface WalletRating {
+  score: number;
+  tier: "ALPHA" | "SOLID" | "NEUTRAL" | "RISKY" | "TOXIC";
+  summary: string;
+  factors: WalletRatingFactor[];
+}
+
+export interface ConnectedWallet {
+  address: string;
+  label: string | null;
+  relation: string;
+}
+
+export interface WalletTrackSnapshot extends WalletProfile {
+  rating: WalletRating;
+  connectedWallets: ConnectedWallet[];
+  ethBalance: number | null;
+  trackLabel: string | null;
+  tracking: boolean;
+}
+
+export interface CrossHolderOverlap {
+  address: string;
+  label: string | null;
+  tokens: Array<{ contractAddress: string; percentOfSupply: number }>;
+  overlapScore: number;
+}

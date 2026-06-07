@@ -42,6 +42,28 @@ export async function fetchWalletTokenBalances(
   }) as Promise<TokenBalanceResult[]>;
 }
 
+export async function fetchEthBalance(walletAddress: string): Promise<number | null> {
+  if (!BASE_URL) return null;
+
+  return alchemyQueue.add(async () => {
+    const res = await fetch(BASE_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        id: 1,
+        method: "eth_getBalance",
+        params: [walletAddress, "latest"],
+      }),
+    });
+
+    if (!res.ok) return null;
+    const json = (await res.json()) as { result?: string };
+    if (!json.result) return null;
+    return Number(BigInt(json.result)) / 1e18;
+  }) as Promise<number | null>;
+}
+
 export async function fetchTokenMetadata(
   contractAddress: string
 ): Promise<TokenMetadata | null> {

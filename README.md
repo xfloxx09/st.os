@@ -57,8 +57,10 @@ npm run dev
 |---------|--------------|-----------|
 | CA analysis | Guest: 5 searches | Unlimited |
 | Holder list | Blockscout fallback | Etherscan direct (needs Pro API key on server) |
-| Wallet deep-dive | No | Yes |
-| Cross-analysis | Phase 3 | Phase 3 |
+| Wallet analyze | No | Yes |
+| Live wallet tracking + alpha rating | No | Yes |
+| Mergeable / tabbed windows | Yes | Yes |
+| Cross-analysis | Phase 3 (lib ready) | Phase 3 |
 
 [Etherscan tokenholderlist](https://docs.etherscan.io/api-reference/endpoint/tokenholderlist) requires API Pro ($49/mo) server-side.
 

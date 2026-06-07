@@ -94,7 +94,7 @@ export async function getPublicPricing(): Promise<PricingPublicResponse> {
     proBenefits: [
       "Direct Etherscan holder pipeline (no Blockscout fallback)",
       "Unlimited CA analysis (no guest cap)",
-      "Wallet STALK deep-dive on all holders",
+      "Wallet analyze + live tracking on all holders",
       "Cross-holder analysis engine (Phase 3)",
       "Priority API rate limits",
     ],

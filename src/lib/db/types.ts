@@ -10,6 +10,7 @@ export interface Database {
   guest_sessions: GuestSessionsTable;
   app_settings: AppSettingsTable;
   subscriptions: SubscriptionsTable;
+  tracked_wallets: TrackedWalletsTable;
 }
 
 export interface UsersTable {
@@ -89,6 +90,17 @@ export interface SubscriptionsTable {
   starts_at: Date;
   expires_at: Date;
   created_at: Generated<Date>;
+}
+
+export interface TrackedWalletsTable {
+  id: Generated<number>;
+  user_id: number;
+  wallet_address: string;
+  label: string | null;
+  source_contract: string | null;
+  notes: string | null;
+  created_at: Generated<Date>;
+  last_checked_at: Date | null;
 }
 
 export type User = Selectable<UsersTable>;

@@ -248,6 +248,35 @@ async function buildPortfolio(walletAddress: string): Promise<PortfolioHolding[]
   return holdings.sort((a, b) => (b.usdValue ?? 0) - (a.usdValue ?? 0));
 }
 
+export async function analyzeWalletOverview(
+  walletAddress: string
+): Promise<WalletProfile> {
+  const wallet = normalizeAddress(walletAddress);
+  const fundOrigin = await traceFundOrigin(wallet);
+  const portfolio = await buildPortfolio(wallet);
+
+  return {
+    walletAddress: wallet,
+    contractAddress: wallet,
+    fundOrigin,
+    trades: [],
+    portfolio,
+    pnl: {
+      averageEntryUsd: null,
+      currentPriceUsd: null,
+      position: 0,
+      unrealizedPnlUsd: null,
+      unrealizedPnlPercent: null,
+      realizedPnlUsd: null,
+      status: "UNKNOWN",
+    },
+    behaviorLabel: portfolio.length >= 5 ? "ACTIVE HOLDER" : "UNKNOWN PROFILE",
+    behaviorConfidence: "LOW",
+    fetchedAt: new Date().toISOString(),
+    cached: false,
+  };
+}
+
 export async function analyzeWallet(
   walletAddress: string,
   contractAddress: string,
