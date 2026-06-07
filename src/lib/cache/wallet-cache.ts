@@ -10,7 +10,8 @@ export type CacheType =
   | "ca_analysis"
   | "wallet_network"
   | "expose_scan"
-  | "bulk_expose";
+  | "bulk_expose"
+  | "pro_alpha";
 
 const TTL_MINUTES: Record<CacheType, number> = {
   profile: 24 * 60,
@@ -23,6 +24,7 @@ const TTL_MINUTES: Record<CacheType, number> = {
   wallet_network: 60,
   expose_scan: 30,
   bulk_expose: 45,
+  pro_alpha: 45,
 };
 
 export function cacheExpiry(cacheType: CacheType): Date {

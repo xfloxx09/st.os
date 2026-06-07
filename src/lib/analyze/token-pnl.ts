@@ -16,14 +16,21 @@ function tokenAmount(raw: string, decimals: number): number {
   return Number(value) / 10 ** decimals;
 }
 
+function filterTxsSince(txs: TokenTx[], sinceMs: number | null): TokenTx[] {
+  if (sinceMs == null) return txs;
+  return txs.filter((tx) => Number(tx.timeStamp) * 1000 >= sinceMs);
+}
+
 export function calculateWalletTokenPnl(
   txs: TokenTx[],
   walletAddress: string,
   decimals: number,
-  currentPriceUsd: number | null
+  currentPriceUsd: number | null,
+  sinceMs: number | null = null
 ): TokenPnlResult {
+  const scoped = filterTxsSince(txs, sinceMs);
   const wallet = walletAddress.toLowerCase();
-  const sorted = [...txs].sort(
+  const sorted = [...scoped].sort(
     (a, b) => Number(a.timeStamp) - Number(b.timeStamp)
   );
 

@@ -11,9 +11,10 @@ import {
   fetchExposeScan,
   fetchFundTrace,
 } from "@/lib/terminal/phase-actions";
+import { ProTrackPanel } from "@/components/terminal/pro-track-panel";
 import { networkResultKey, useAppStore } from "@/stores/app-store";
 
-type Tab = "holders" | "traders" | "exposed";
+type Tab = "holders" | "traders" | "exposed" | "pro";
 
 function formatPercent(value: number): string {
   if (value >= 0.01) return `${value.toFixed(2)}%`;
@@ -129,6 +130,7 @@ export function HolderRosterPanel({
 
   useEffect(() => {
     void runExposeScan();
+    if (isPro) setTab("pro");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [contractAddress]);
 
@@ -180,15 +182,17 @@ export function HolderRosterPanel({
     }
   };
 
+  const proAlpha = useAppStore((s) => s.proAlphaResults[contractAddress]);
+
   const tabBtn = (id: Tab, label: string, count?: number) => {
-    const isExposed = id === "exposed";
+    const isGold = id === "exposed" || id === "pro";
     const active = tab === id;
     return (
       <button
         type="button"
         onClick={() => setTab(id)}
         className={`border px-2 py-1 text-[10px] tracking-wide ${
-          isExposed
+          isGold
             ? active
               ? "border-[var(--warning)] bg-[var(--warning)] text-[var(--bg)] shadow-[0_0_14px_rgba(255,184,0,0.4)]"
               : "border-[var(--warning)]/70 bg-[var(--warning)]/10 text-[var(--warning)]"
@@ -197,7 +201,7 @@ export function HolderRosterPanel({
               : "border-[var(--border)] text-[var(--text-secondary)] hover:border-[var(--accent)]"
         }`}
       >
-        {isExposed ? "★ " : ""}
+        {isGold ? "★ " : ""}
         {label}
         {count != null ? ` (${count})` : ""}
       </button>
@@ -228,6 +232,7 @@ export function HolderRosterPanel({
           {tabBtn("holders", "HOLDERS", holders.length)}
           {tabBtn("traders", "TOP PNL", traders.length)}
           {tabBtn("exposed", "EXPOSED", exposedWallets.length)}
+          {tabBtn("pro", "PRO TRACK", proAlpha?.trackWallets.length)}
         </div>
         {canAct && isPro ? (
           <div className="flex flex-wrap gap-1">
@@ -438,6 +443,10 @@ export function HolderRosterPanel({
             </table>
           </div>
         </>
+      ) : null}
+
+      {tab === "pro" ? (
+        <ProTrackPanel contractAddress={contractAddress} isPro={isPro} />
       ) : null}
 
       {filteredHolders.length > 0 ? (

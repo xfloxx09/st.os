@@ -315,3 +315,65 @@ export interface BulkExposeResult {
   fetchedAt: string;
   cached: boolean;
 }
+
+export type WalletStrategy =
+  | "ALPHA LEADER"
+  | "ALPHA"
+  | "EARLY BUYER"
+  | "FOLLOWS ALPHA"
+  | "SNIPER"
+  | "SWING TRADER"
+  | "DIAMOND HANDS"
+  | "WHALE STACKER"
+  | "SERIAL DEGEN"
+  | "AIRDROP"
+  | "UNKNOWN";
+
+export interface WindowPnlSnapshot {
+  totalPnlUsd: number | null;
+  tradeCount: number;
+  status: TraderEntry["status"];
+}
+
+export interface TradeMarker {
+  timestamp: string;
+  type: "BUY" | "SELL";
+  tokenAmount: number;
+  txHash: string;
+}
+
+export interface TokenChartPoint {
+  timestamp: string;
+  priceUsd: number;
+}
+
+export interface ProTrackWallet {
+  rank: number;
+  address: string;
+  label: string | null;
+  holderRank: number | null;
+  percentOfSupply: number | null;
+  strategy: WalletStrategy;
+  strategyDetail: string;
+  preferredWindow: string;
+  intelScore: number;
+  trackScore: number;
+  firstMoverScore: number;
+  followers48h: number;
+  buyRank: number | null;
+  pnlDay: WindowPnlSnapshot;
+  pnlWeek: WindowPnlSnapshot;
+  pnlMonth: WindowPnlSnapshot;
+  markers: TradeMarker[];
+  trackReasons: string[];
+}
+
+export interface ProAlphaScanResult {
+  contractAddress: string;
+  tokenSymbol: string | null;
+  trackWallets: ProTrackWallet[];
+  chartPoints: TokenChartPoint[];
+  summary: string;
+  fetchedAt: string;
+  cached: boolean;
+}

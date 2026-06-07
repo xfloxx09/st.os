@@ -3,6 +3,7 @@ import type {
   BulkExposeResult,
   CrossAnalysisResult,
   ExposeScanResult,
+  ProAlphaScanResult,
   FundTraceResult,
   WalletNetworkResult,
   WalletProfile,
@@ -76,6 +77,18 @@ export async function fetchExposeScan(
   const data = await res.json();
   if (!res.ok) throw new Error(data.error ?? "Expose scan failed");
   return data as ExposeScanResult & { proRequired?: boolean };
+}
+
+export async function fetchProAlphaScan(
+  contractAddress: string,
+  options?: { refresh?: boolean }
+): Promise<ProAlphaScanResult> {
+  const params = new URLSearchParams({ contract: contractAddress });
+  if (options?.refresh) params.set("refresh", "1");
+  const res = await fetch(`/api/analyze/pro-alpha?${params}`);
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error ?? "Pro alpha scan failed");
+  return data as ProAlphaScanResult;
 }
 
 export async function fetchBulkExpose(

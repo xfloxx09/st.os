@@ -14,7 +14,8 @@ const PRO_FEATURES = [
   { label: "Live tracking", detail: "Alpha ratings + auto-refresh monitors" },
   { label: "Fund tracer", detail: "Shared funding paths across top holders" },
   { label: "Cross-analysis", detail: "Find insiders across 2–5 tokens" },
-  { label: "Network map", detail: "FBI-style co-buy syndicate graph (30d/90d)" },
+  { label: "Pro Track", detail: "Alpha wallets ranked by PnL + intel + strategy labels + chart markers" },
+  { label: "Co-buy links", detail: "Who bought the same tokens and when (30d/90d)" },
   { label: "Crypto billing", detail: "Pay ETH or hold EXPOSED tokens" },
 ];
 
