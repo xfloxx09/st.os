@@ -8,7 +8,7 @@ import {
   setCachedWalletData,
 } from "@/lib/cache/wallet-cache";
 import { isValidEthAddress, normalizeAddress } from "@/lib/ethereum";
-import { checkRateLimit } from "@/lib/rate-limit";
+import { checkRateLimit, rateLimitErrorMessage } from "@/lib/rate-limit";
 import { getSearchHistory, recordSearch } from "@/lib/search-history";
 import { hasActiveSubscription } from "@/lib/billing/subscription";
 
@@ -29,25 +29,6 @@ export async function GET(request: NextRequest) {
   const normalized = normalizeAddress(address);
   const skipCache = request.nextUrl.searchParams.get("refresh") === "1";
 
-  if (session.type === "guest") {
-    if (session.searchesRemaining <= 0) {
-      return NextResponse.json(
-        {
-          error: "Guest search limit reached (5). Connect Telegram for unlimited access.",
-        },
-        { status: 429 }
-      );
-    }
-  } else {
-    const rate = await checkRateLimit(session.userId, "analyze_ca");
-    if (!rate.allowed) {
-      return NextResponse.json(
-        { error: "Rate limit exceeded. Try again later." },
-        { status: 429 }
-      );
-    }
-  }
-
   let result: CaAnalysisResult | null = null;
 
   if (!skipCache) {
@@ -56,7 +37,7 @@ export async function GET(request: NextRequest) {
       "ca_analysis"
     );
     if (cached && cached.allHolders.length > 0) {
-      result = cached;
+      result = { ...cached, cached: true };
     }
   }
 
@@ -64,6 +45,24 @@ export async function GET(request: NextRequest) {
     session.type === "user" && (await hasActiveSubscription(session.userId));
 
   if (!result) {
+    if (session.type === "guest") {
+      if (session.searchesRemaining <= 0) {
+        return NextResponse.json(
+          {
+            error: "Guest search limit reached (5). Connect Telegram for unlimited access.",
+          },
+          { status: 429 }
+        );
+      }
+    } else {
+      const rate = await checkRateLimit(session.userId, "analyze_ca");
+      if (!rate.allowed) {
+        return NextResponse.json(
+          { error: rateLimitErrorMessage("analyze_ca") },
+          { status: 429 }
+        );
+      }
+    }
     try {
       result = await analyzeContractAddress(normalized, { isPro });
       await setCachedWalletData(normalized, "ca_analysis", result);
@@ -72,8 +71,6 @@ export async function GET(request: NextRequest) {
         err instanceof Error ? err.message : "Failed to analyze contract";
       return NextResponse.json({ error: message }, { status: 502 });
     }
-  } else {
-    result = { ...result, cached: true };
   }
 
   let guestMeta = null;

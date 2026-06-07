@@ -9,7 +9,7 @@ import {
   setCachedWalletData,
 } from "@/lib/cache/wallet-cache";
 import { isValidEthAddress, normalizeAddress } from "@/lib/ethereum";
-import { checkRateLimit } from "@/lib/rate-limit";
+import { checkRateLimit, rateLimitErrorMessage } from "@/lib/rate-limit";
 
 export async function GET(request: NextRequest) {
   const session = await getAuthSession();
@@ -27,34 +27,41 @@ export async function GET(request: NextRequest) {
   const cacheKey = `${normalized}|expose|v2|${fullScan ? "full" : "basic"}`;
   const skipCache = request.nextUrl.searchParams.get("refresh") === "1";
 
-  if (session?.type === "user") {
-    const rate = await checkRateLimit(session.userId, "cross_analyze");
-    if (!rate.allowed) {
-      return NextResponse.json({ error: "Rate limit exceeded." }, { status: 429 });
-    }
-  }
-
   let result: ExposeScanResult | null = null;
   if (!skipCache) {
     result = await getCachedWalletData<ExposeScanResult>(cacheKey, "expose_scan");
   }
 
-  if (!result) {
-    try {
-      const analysis = await analyzeContractAddress(normalized, { isPro });
-      result = await scanForExposedWallets(
-        normalized,
-        analysis.overview,
-        analysis.holders,
-        { fullScan }
+  if (result) {
+    return NextResponse.json({
+      ...result,
+      cached: true,
+      proRequired: !isPro,
+    });
+  }
+
+  if (session?.type === "user") {
+    const rate = await checkRateLimit(session.userId, "expose_scan");
+    if (!rate.allowed) {
+      return NextResponse.json(
+        { error: rateLimitErrorMessage("expose_scan") },
+        { status: 429 }
       );
-      await setCachedWalletData(cacheKey, "expose_scan", result);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Expose scan failed";
-      return NextResponse.json({ error: message }, { status: 502 });
     }
-  } else {
-    result = { ...result, cached: true };
+  }
+
+  try {
+    const analysis = await analyzeContractAddress(normalized, { isPro });
+    result = await scanForExposedWallets(
+      normalized,
+      analysis.overview,
+      analysis.holders,
+      { fullScan }
+    );
+    await setCachedWalletData(cacheKey, "expose_scan", result);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Expose scan failed";
+    return NextResponse.json({ error: message }, { status: 502 });
   }
 
   return NextResponse.json({

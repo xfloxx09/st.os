@@ -10,7 +10,7 @@ import {
   setCachedWalletData,
 } from "@/lib/cache/wallet-cache";
 import { isValidEthAddress, normalizeAddress } from "@/lib/ethereum";
-import { checkRateLimit } from "@/lib/rate-limit";
+import { checkRateLimit, rateLimitErrorMessage } from "@/lib/rate-limit";
 import type { NetworkWindow } from "@/lib/analyze/wallet-network";
 
 export async function GET(request: NextRequest) {
@@ -38,46 +38,49 @@ export async function GET(request: NextRequest) {
   const cacheKey = `${normalized}|bulk|${windowDays}`;
   const skipCache = request.nextUrl.searchParams.get("refresh") === "1";
 
-  const rate = await checkRateLimit(session.userId, "cross_analyze");
-  if (!rate.allowed) {
-    return NextResponse.json({ error: "Rate limit exceeded." }, { status: 429 });
-  }
-
   let result: BulkExposeResult | null = null;
   if (!skipCache) {
     result = await getCachedWalletData<BulkExposeResult>(cacheKey, "bulk_expose");
   }
 
-  if (!result) {
-    try {
-      const isPro = await hasActiveSubscription(session.userId);
-      const analysis = await analyzeContractAddress(normalized, { isPro });
-      const scan = await scanForExposedWallets(
-        normalized,
-        analysis.overview,
-        analysis.holders,
-        { fullScan: true }
-      );
+  if (result) {
+    return NextResponse.json({ ...result, cached: true });
+  }
 
-      if (scan.exposedWallets.length === 0) {
-        return NextResponse.json(
-          { error: "No exposed wallets flagged for this token." },
-          { status: 404 }
-        );
-      }
+  const rate = await checkRateLimit(session.userId, "cross_analyze");
+  if (!rate.allowed) {
+    return NextResponse.json(
+      { error: rateLimitErrorMessage("cross_analyze") },
+      { status: 429 }
+    );
+  }
 
-      result = await bulkExposeWallets(
-        normalized,
-        scan.exposedWallets,
-        windowDays
+  try {
+    const isPro = await hasActiveSubscription(session.userId);
+    const analysis = await analyzeContractAddress(normalized, { isPro });
+    const scan = await scanForExposedWallets(
+      normalized,
+      analysis.overview,
+      analysis.holders,
+      { fullScan: true }
+    );
+
+    if (scan.exposedWallets.length === 0) {
+      return NextResponse.json(
+        { error: "No exposed wallets flagged for this token." },
+        { status: 404 }
       );
-      await setCachedWalletData(cacheKey, "bulk_expose", result);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Bulk expose failed";
-      return NextResponse.json({ error: message }, { status: 502 });
     }
-  } else {
-    result = { ...result, cached: true };
+
+    result = await bulkExposeWallets(
+      normalized,
+      scan.exposedWallets,
+      windowDays
+    );
+    await setCachedWalletData(cacheKey, "bulk_expose", result);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Bulk expose failed";
+    return NextResponse.json({ error: message }, { status: 502 });
   }
 
   return NextResponse.json({ ...result, rateLimitRemaining: rate.remaining });

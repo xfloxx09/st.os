@@ -7,7 +7,7 @@ import {
   setCachedWalletData,
 } from "@/lib/cache/wallet-cache";
 import { isValidEthAddress, normalizeAddress } from "@/lib/ethereum";
-import { checkRateLimit } from "@/lib/rate-limit";
+import { checkRateLimit, rateLimitErrorMessage } from "@/lib/rate-limit";
 
 function cacheKey(wallet: string, contract: string) {
   return `${wallet}|${contract}`;
@@ -47,30 +47,33 @@ export async function GET(request: NextRequest) {
   const key = cacheKey(normalizedWallet, normalizedContract);
   const skipCache = request.nextUrl.searchParams.get("refresh") === "1";
 
-  const rate = await checkRateLimit(session.userId, "stalk_wallet");
-  if (!rate.allowed) {
-    return NextResponse.json({ error: "Rate limit exceeded." }, { status: 429 });
-  }
-
   let result: WalletProfile | null = null;
   if (!skipCache) {
     result = await getCachedWalletData<WalletProfile>(key, "profile");
   }
 
-  if (!result) {
-    try {
-      result = await analyzeWallet(
-        normalizedWallet,
-        normalizedContract,
-        percent ? Number(percent) : null
-      );
-      await setCachedWalletData(key, "profile", result);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Wallet analysis failed";
-      return NextResponse.json({ error: message }, { status: 502 });
-    }
-  } else {
-    result = { ...result, cached: true };
+  if (result) {
+    return NextResponse.json({ ...result, cached: true });
+  }
+
+  const rate = await checkRateLimit(session.userId, "stalk_wallet");
+  if (!rate.allowed) {
+    return NextResponse.json(
+      { error: rateLimitErrorMessage("stalk_wallet") },
+      { status: 429 }
+    );
+  }
+
+  try {
+    result = await analyzeWallet(
+      normalizedWallet,
+      normalizedContract,
+      percent ? Number(percent) : null
+    );
+    await setCachedWalletData(key, "profile", result);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Wallet analysis failed";
+    return NextResponse.json({ error: message }, { status: 502 });
   }
 
   return NextResponse.json({ ...result, rateLimitRemaining: rate.remaining });

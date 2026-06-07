@@ -4,7 +4,7 @@ import { hasActiveSubscription } from "@/lib/billing/subscription";
 import { getAuthSession } from "@/lib/auth/session";
 import { getDb } from "@/lib/db";
 import { isValidEthAddress, normalizeAddress } from "@/lib/ethereum";
-import { checkRateLimit } from "@/lib/rate-limit";
+import { checkRateLimit, rateLimitErrorMessage } from "@/lib/rate-limit";
 
 export async function GET(request: NextRequest) {
   const session = await getAuthSession();
@@ -33,7 +33,10 @@ export async function GET(request: NextRequest) {
 
   const rate = await checkRateLimit(session.userId, "stalk_wallet");
   if (!rate.allowed) {
-    return NextResponse.json({ error: "Rate limit exceeded." }, { status: 429 });
+    return NextResponse.json(
+      { error: rateLimitErrorMessage("stalk_wallet") },
+      { status: 429 }
+    );
   }
 
   const normalized = normalizeAddress(wallet);

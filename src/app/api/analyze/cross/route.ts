@@ -8,7 +8,7 @@ import {
   setCachedWalletData,
 } from "@/lib/cache/wallet-cache";
 import { isValidEthAddress, normalizeAddress } from "@/lib/ethereum";
-import { checkRateLimit } from "@/lib/rate-limit";
+import { checkRateLimit, rateLimitErrorMessage } from "@/lib/rate-limit";
 
 function crossCacheKey(contracts: string[]) {
   return contracts
@@ -56,11 +56,6 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  const rate = await checkRateLimit(session.userId, "cross_analyze");
-  if (!rate.allowed) {
-    return NextResponse.json({ error: "Rate limit exceeded." }, { status: 429 });
-  }
-
   const key = crossCacheKey(contracts);
   const skipCache = request.nextUrl.searchParams.get("refresh") === "1";
   const isPro = await hasActiveSubscription(session.userId);
@@ -70,16 +65,24 @@ export async function GET(request: NextRequest) {
     result = await getCachedWalletData<CrossAnalysisResult>(key, "cross_analysis");
   }
 
-  if (!result) {
-    try {
-      result = await runCrossAnalysis(contracts, { isPro });
-      await setCachedWalletData(key, "cross_analysis", result);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Cross-analysis failed";
-      return NextResponse.json({ error: message }, { status: 502 });
-    }
-  } else {
-    result = { ...result, cached: true };
+  if (result) {
+    return NextResponse.json({ ...result, cached: true });
+  }
+
+  const rate = await checkRateLimit(session.userId, "cross_analyze");
+  if (!rate.allowed) {
+    return NextResponse.json(
+      { error: rateLimitErrorMessage("cross_analyze") },
+      { status: 429 }
+    );
+  }
+
+  try {
+    result = await runCrossAnalysis(contracts, { isPro });
+    await setCachedWalletData(key, "cross_analysis", result);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Cross-analysis failed";
+    return NextResponse.json({ error: message }, { status: 502 });
   }
 
   return NextResponse.json({ ...result, rateLimitRemaining: rate.remaining });

@@ -100,6 +100,7 @@ export function HolderRosterPanel({
   const [tracingFunds, setTracingFunds] = useState(false);
   const [exposingAll, setExposingAll] = useState(false);
   const [scanLoading, setScanLoading] = useState(false);
+  const [exposeScanError, setExposeScanError] = useState<string | null>(null);
   const [showFiltered, setShowFiltered] = useState(false);
 
   const guest = useAppStore((s) => s.guest);
@@ -133,7 +134,7 @@ export function HolderRosterPanel({
   const runExposeScan = async (force = false) => {
     if (exposeScan && !force) return;
     setScanLoading(true);
-    setAnalyzeError(null);
+    setExposeScanError(null);
     setActiveProcesses(useAppStore.getState().activeProcesses + 1);
     try {
       const result = await fetchExposeScan(contractAddress, {
@@ -142,7 +143,9 @@ export function HolderRosterPanel({
       });
       setExposeScan(contractAddress, result);
     } catch (err) {
-      setAnalyzeError(err instanceof Error ? err.message : "Expose scan failed");
+      setExposeScanError(
+        err instanceof Error ? err.message : "Expose scan failed"
+      );
     } finally {
       setScanLoading(false);
       setActiveProcesses(Math.max(0, useAppStore.getState().activeProcesses - 1));
@@ -410,13 +413,24 @@ export function HolderRosterPanel({
           <div className="text-[10px] text-[var(--text-secondary)]">
             {scanLoading
               ? "AUTO-EXPOSING SUSPICIOUS WALLETS ON THIS CA..."
-              : exposeScan?.summary ?? "Auto-scan runs when you paste a CA."}
-            {exposeScan?.scanDepth === "basic" && !isPro ? (
+              : exposeScanError
+                ? exposeScanError
+                : exposeScan?.summary ?? "Auto-scan runs when you paste a CA."}
+            {exposeScan?.scanDepth === "basic" && !isPro && !exposeScanError ? (
               <span className="ml-2 text-[var(--warning)]">
                 · Preview scan — Pro unlocks fund-trace depth + EXPOSE ALL
               </span>
             ) : null}
           </div>
+          {exposeScanError ? (
+            <button
+              type="button"
+              onClick={() => void runExposeScan(true)}
+              className="text-[10px] text-[var(--warning)] underline"
+            >
+              Retry expose scan
+            </button>
+          ) : null}
           <div className="max-h-[320px] overflow-auto os-scrollbar">
             <table className="w-full text-left">
               <thead className="sticky top-0 bg-[var(--bg-panel)] text-[10px] text-[var(--text-secondary)]">

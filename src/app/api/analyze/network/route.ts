@@ -11,7 +11,7 @@ import {
   setCachedWalletData,
 } from "@/lib/cache/wallet-cache";
 import { isValidEthAddress, normalizeAddress } from "@/lib/ethereum";
-import { checkRateLimit } from "@/lib/rate-limit";
+import { checkRateLimit, rateLimitErrorMessage } from "@/lib/rate-limit";
 
 function cacheKey(wallet: string, windowDays: number) {
   return `${normalizeAddress(wallet)}|network|${windowDays}`;
@@ -43,11 +43,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Invalid contract address" }, { status: 400 });
   }
 
-  const rate = await checkRateLimit(session.userId, "cross_analyze");
-  if (!rate.allowed) {
-    return NextResponse.json({ error: "Rate limit exceeded." }, { status: 429 });
-  }
-
   const key = cacheKey(wallet, windowDays);
   const skipCache = request.nextUrl.searchParams.get("refresh") === "1";
 
@@ -56,20 +51,24 @@ export async function GET(request: NextRequest) {
     result = await getCachedWalletData<WalletNetworkResult>(key, "wallet_network");
   }
 
-  if (!result) {
-    try {
-      result = await buildWalletNetwork(
-        wallet,
-        windowDays,
-        contract ?? null
-      );
-      await setCachedWalletData(key, "wallet_network", result);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Network analysis failed";
-      return NextResponse.json({ error: message }, { status: 502 });
-    }
-  } else {
-    result = { ...result, cached: true };
+  if (result) {
+    return NextResponse.json({ ...result, cached: true });
+  }
+
+  const rate = await checkRateLimit(session.userId, "cross_analyze");
+  if (!rate.allowed) {
+    return NextResponse.json(
+      { error: rateLimitErrorMessage("cross_analyze") },
+      { status: 429 }
+    );
+  }
+
+  try {
+    result = await buildWalletNetwork(wallet, windowDays, contract ?? null);
+    await setCachedWalletData(key, "wallet_network", result);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Network analysis failed";
+    return NextResponse.json({ error: message }, { status: 502 });
   }
 
   return NextResponse.json({ ...result, rateLimitRemaining: rate.remaining });

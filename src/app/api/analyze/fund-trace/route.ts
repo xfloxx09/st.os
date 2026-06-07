@@ -9,7 +9,7 @@ import {
   setCachedWalletData,
 } from "@/lib/cache/wallet-cache";
 import { isValidEthAddress, normalizeAddress } from "@/lib/ethereum";
-import { checkRateLimit } from "@/lib/rate-limit";
+import { checkRateLimit, rateLimitErrorMessage } from "@/lib/rate-limit";
 
 export async function GET(request: NextRequest) {
   const session = await getAuthSession();
@@ -35,33 +35,36 @@ export async function GET(request: NextRequest) {
   const cacheKey = `${normalized}|fund`;
   const skipCache = request.nextUrl.searchParams.get("refresh") === "1";
 
-  const rate = await checkRateLimit(session.userId, "cross_analyze");
-  if (!rate.allowed) {
-    return NextResponse.json({ error: "Rate limit exceeded." }, { status: 429 });
-  }
-
   let result: FundTraceResult | null = null;
   if (!skipCache) {
     result = await getCachedWalletData<FundTraceResult>(cacheKey, "fund_origin");
   }
 
-  if (!result) {
-    try {
-      const isPro = await hasActiveSubscription(session.userId);
-      const analysis = await analyzeContractAddress(normalized, { isPro });
-      result = await traceTokenFunds(
-        normalized,
-        analysis.holders,
-        analysis.overview.symbol,
-        Math.min(30, Math.max(5, limit))
-      );
-      await setCachedWalletData(cacheKey, "fund_origin", result);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Fund trace failed";
-      return NextResponse.json({ error: message }, { status: 502 });
-    }
-  } else {
-    result = { ...result, cached: true };
+  if (result) {
+    return NextResponse.json({ ...result, cached: true });
+  }
+
+  const rate = await checkRateLimit(session.userId, "cross_analyze");
+  if (!rate.allowed) {
+    return NextResponse.json(
+      { error: rateLimitErrorMessage("cross_analyze") },
+      { status: 429 }
+    );
+  }
+
+  try {
+    const isPro = await hasActiveSubscription(session.userId);
+    const analysis = await analyzeContractAddress(normalized, { isPro });
+    result = await traceTokenFunds(
+      normalized,
+      analysis.holders,
+      analysis.overview.symbol,
+      Math.min(30, Math.max(5, limit))
+    );
+    await setCachedWalletData(cacheKey, "fund_origin", result);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Fund trace failed";
+    return NextResponse.json({ error: message }, { status: 502 });
   }
 
   return NextResponse.json({ ...result, rateLimitRemaining: rate.remaining });
