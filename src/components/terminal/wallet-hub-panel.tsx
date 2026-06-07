@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import type { WalletProfile } from "@/lib/analyze/types";
-import { formatPercent, formatUsd, truncateAddress } from "@/lib/ethereum";
+import { formatPercent, formatPnlValue, formatUsd, truncateAddress } from "@/lib/ethereum";
+import { PnlCurrencyToggle } from "@/components/terminal/pnl-currency-toggle";
 import { fetchWalletAnalyze, fetchWalletNetwork } from "@/lib/terminal/phase-actions";
 import { elapsedMs, startTimer } from "@/lib/timing";
 import {
@@ -28,6 +29,8 @@ export function WalletHubPanel({
 }) {
   const user = useAppStore((s) => s.user);
   const isPro = Boolean(user?.isPro || user?.isAdmin);
+  const pnlCurrency = useAppStore((s) => s.pnlCurrency);
+  const ethPriceUsd = useAppStore((s) => s.ethPriceUsd);
   const walletAliases = useAppStore((s) => s.walletAliases);
   const trackedWallets = useAppStore((s) => s.trackedWallets);
   const setWalletProfile = useAppStore((s) => s.setWalletProfile);
@@ -337,13 +340,23 @@ export function WalletHubPanel({
       </section>
 
       <section>
-        <h3 className="mb-1 text-[9px] tracking-[0.2em] text-[var(--text-secondary)]">
-          PNL ON THIS TOKEN
-        </h3>
+        <div className="mb-1 flex items-center justify-between gap-2">
+          <h3 className="text-[9px] tracking-[0.2em] text-[var(--text-secondary)]">
+            PNL ON THIS TOKEN
+          </h3>
+          <PnlCurrencyToggle />
+        </div>
+        <p className="mb-2 text-[9px] text-[var(--text-secondary)]/80">
+          Estimated gain/loss on this token in{" "}
+          {pnlCurrency === "eth" ? "ETH" : "USD"} (vs average cost basis)
+        </p>
         <div className="grid grid-cols-2 gap-2">
           <MiniStat label="STATUS" value={profile.pnl.status} />
           <MiniStat label="POSITION" value={profile.pnl.position.toLocaleString()} />
-          <MiniStat label="UNREALIZED" value={formatUsd(profile.pnl.unrealizedPnlUsd)} />
+          <MiniStat
+            label="UNREALIZED"
+            value={formatPnlValue(profile.pnl.unrealizedPnlUsd, pnlCurrency, ethPriceUsd)}
+          />
           <MiniStat
             label="CHANGE"
             value={formatPercent(profile.pnl.unrealizedPnlPercent)}

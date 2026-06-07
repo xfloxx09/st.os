@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import type { WalletProfile } from "@/lib/analyze/types";
-import { formatPercent, formatUsd, truncateAddress } from "@/lib/ethereum";
+import { formatPercent, formatPnlValue, formatUsd, truncateAddress } from "@/lib/ethereum";
+import { PnlCurrencyToggle } from "@/components/terminal/pnl-currency-toggle";
 import { fetchWalletNetwork } from "@/lib/terminal/phase-actions";
 import { elapsedMs, startTimer } from "@/lib/timing";
 import { networkResultKey, useAppStore } from "@/stores/app-store";
@@ -12,6 +13,8 @@ export function WalletProfilePanel({ profile }: { profile: WalletProfile }) {
   const openNetworkPanel = useAppStore((s) => s.openNetworkPanel);
   const setNetworkResult = useAppStore((s) => s.setNetworkResult);
   const setAnalyzeError = useAppStore((s) => s.setAnalyzeError);
+  const pnlCurrency = useAppStore((s) => s.pnlCurrency);
+  const ethPriceUsd = useAppStore((s) => s.ethPriceUsd);
 
   const onMapNetwork = async () => {
     setMapping(true);
@@ -113,17 +116,29 @@ export function WalletProfilePanel({ profile }: { profile: WalletProfile }) {
       </section>
 
       <section>
-        <h3 className="mb-2 text-[10px] tracking-[0.2em] text-[var(--text-secondary)]">
-          PNL ESTIMATE
-        </h3>
+        <div className="mb-2 flex items-center justify-between gap-2">
+          <h3 className="text-[10px] tracking-[0.2em] text-[var(--text-secondary)]">
+            PNL ESTIMATE
+          </h3>
+          <PnlCurrencyToggle />
+        </div>
+        <p className="mb-2 text-[9px] text-[var(--text-secondary)]/80">
+          Gain/loss on this token in {pnlCurrency === "eth" ? "ETH" : "USD"} · % is vs cost basis
+        </p>
         <div className="grid grid-cols-2 gap-2">
           <Stat label="STATUS" value={profile.pnl.status} />
           <Stat label="POSITION" value={profile.pnl.position.toLocaleString()} />
-          <Stat label="ENTRY" value={formatUsd(profile.pnl.averageEntryUsd)} />
-          <Stat label="CURRENT" value={formatUsd(profile.pnl.currentPriceUsd)} />
+          <Stat
+            label="ENTRY"
+            value={formatPnlValue(profile.pnl.averageEntryUsd, pnlCurrency, ethPriceUsd)}
+          />
+          <Stat
+            label="CURRENT"
+            value={formatPnlValue(profile.pnl.currentPriceUsd, pnlCurrency, ethPriceUsd)}
+          />
           <Stat
             label="UNREALIZED"
-            value={formatUsd(profile.pnl.unrealizedPnlUsd)}
+            value={formatPnlValue(profile.pnl.unrealizedPnlUsd, pnlCurrency, ethPriceUsd)}
             extra={formatPercent(profile.pnl.unrealizedPnlPercent)}
           />
         </div>

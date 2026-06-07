@@ -13,6 +13,8 @@ import type {
 
 
 
+export type PnlCurrency = "eth" | "usd";
+
 export type PanelType =
 
   | "TOKEN_OVERVIEW"
@@ -217,6 +219,10 @@ interface AppState {
 
   mergeHoverGroupId: string | null;
 
+  pnlCurrency: PnlCurrency;
+
+  ethPriceUsd: number | null;
+
   isAuthenticated: () => boolean;
 
   setBootComplete: (value: boolean) => void;
@@ -255,6 +261,10 @@ interface AppState {
   setDraggingGroupId: (groupId: string | null) => void;
 
   setMergeHoverGroupId: (groupId: string | null) => void;
+
+  setPnlCurrency: (currency: PnlCurrency) => void;
+
+  setEthPriceUsd: (price: number | null) => void;
 
   setAnalysis: (contractAddress: string, data: CaAnalysisResult) => void;
 
@@ -476,6 +486,10 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   mergeHoverGroupId: null,
 
+  pnlCurrency: "eth",
+
+  ethPriceUsd: null,
+
   isAuthenticated: () => Boolean(get().user || get().guest),
 
   setBootComplete: (value) => set({ bootComplete: value }),
@@ -528,6 +542,10 @@ export const useAppStore = create<AppState>((set, get) => ({
   setDraggingGroupId: (groupId) => set({ draggingGroupId: groupId }),
 
   setMergeHoverGroupId: (groupId) => set({ mergeHoverGroupId: groupId }),
+
+  setPnlCurrency: (currency) => set({ pnlCurrency: currency }),
+
+  setEthPriceUsd: (price) => set({ ethPriceUsd: price }),
 
   setAnalysis: (contractAddress, data) =>
 

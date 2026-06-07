@@ -19,9 +19,22 @@ export function TerminalShell() {
   const setTrackedFolders = useAppStore((s) => s.setTrackedFolders);
   const setWalletAliases = useAppStore((s) => s.setWalletAliases);
   const setTelegramBotUsername = useAppStore((s) => s.setTelegramBotUsername);
+  const setEthPriceUsd = useAppStore((s) => s.setEthPriceUsd);
   const bootComplete = useAppStore((s) => s.bootComplete);
 
   useTrackAutoRefresh();
+
+  const ethPriceQuery = useQuery({
+    queryKey: ["eth-price"],
+    queryFn: async () => {
+      const res = await fetch("/api/network/eth-price");
+      if (!res.ok) return { ethPriceUsd: null as number | null };
+      return res.json() as Promise<{ ethPriceUsd: number | null }>;
+    },
+    enabled: bootComplete,
+    staleTime: 60_000,
+    refetchInterval: 120_000,
+  });
 
   const configQuery = useQuery({
     queryKey: ["config"],
@@ -50,6 +63,12 @@ export function TerminalShell() {
       setTelegramBotUsername(configQuery.data.telegramBotUsername);
     }
   }, [configQuery.data, setTelegramBotUsername]);
+
+  useEffect(() => {
+    if (ethPriceQuery.data?.ethPriceUsd != null) {
+      setEthPriceUsd(ethPriceQuery.data.ethPriceUsd);
+    }
+  }, [ethPriceQuery.data, setEthPriceUsd]);
 
   useEffect(() => {
     if (!sessionQuery.data?.authenticated) return;

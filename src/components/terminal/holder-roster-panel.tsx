@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import type { ExposedWallet, HolderEntry, TraderEntry } from "@/lib/analyze/types";
-import { formatUsd, truncateAddress } from "@/lib/ethereum";
+import { formatPnlValue, formatUsd, truncateAddress } from "@/lib/ethereum";
+import { PnlCurrencyToggle } from "@/components/terminal/pnl-currency-toggle";
 import { elapsedMs, startTimer } from "@/lib/timing";
 import {
   fetchBulkExpose,
@@ -78,6 +79,8 @@ export function HolderRosterPanel({
   const setFundTrace = useAppStore((s) => s.setFundTrace);
   const toggleCrossCompare = useAppStore((s) => s.toggleCrossCompare);
   const crossCompareSelection = useAppStore((s) => s.crossCompareSelection);
+  const pnlCurrency = useAppStore((s) => s.pnlCurrency);
+  const ethPriceUsd = useAppStore((s) => s.ethPriceUsd);
 
   const excludedCount = allHolders.length - holders.length;
   const filteredHolders = allHolders.filter((h) => h.excluded);
@@ -318,9 +321,18 @@ export function HolderRosterPanel({
 
       {tab === "traders" ? (
         <>
-          <div className="flex items-center justify-between gap-2 text-[10px] text-[var(--text-secondary)]">
-            <span>Top PnL on this token</span>
-            {clickHint}
+          <div className="flex flex-wrap items-center justify-between gap-2 text-[10px] text-[var(--text-secondary)]">
+            <div className="space-y-0.5">
+              <span>Top PnL on this token</span>
+              <p className="text-[9px] text-[var(--text-secondary)]/80">
+                Profit/loss vs cost basis (realized + unrealized) ·{" "}
+                {pnlCurrency === "eth" ? "ETH" : "USD"} at current token price
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <PnlCurrencyToggle />
+              {clickHint}
+            </div>
           </div>
           <div className="max-h-[340px] overflow-auto os-scrollbar">
             <table className="w-full text-left">
@@ -328,7 +340,9 @@ export function HolderRosterPanel({
                 <tr className="border-b border-[var(--border)]">
                   <th className="py-1 pr-2">#</th>
                   <th className="py-1 pr-2">WALLET</th>
-                  <th className="py-1 pr-2 text-right">PNL</th>
+                  <th className="py-1 pr-2 text-right">
+                    PNL ({pnlCurrency === "eth" ? "Ξ" : "$"})
+                  </th>
                   <th className="py-1 text-right">STATUS</th>
                 </tr>
               </thead>
@@ -354,7 +368,7 @@ export function HolderRosterPanel({
                           : "text-[var(--danger)]"
                       }`}
                     >
-                      {formatUsd(trader.totalPnlUsd)}
+                      {formatPnlValue(trader.totalPnlUsd, pnlCurrency, ethPriceUsd)}
                     </td>
                     <td className="py-1.5 text-right text-[9px] text-[var(--text-secondary)]">
                       {trader.status}

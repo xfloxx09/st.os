@@ -27,3 +27,34 @@ export function formatPercent(value: number | null | undefined): string {
   const sign = value >= 0 ? "+" : "";
   return `${sign}${value.toFixed(2)}%`;
 }
+
+export function usdToEth(
+  usd: number | null | undefined,
+  ethPriceUsd: number | null | undefined
+): number | null {
+  if (usd == null || ethPriceUsd == null || ethPriceUsd <= 0 || Number.isNaN(usd)) {
+    return null;
+  }
+  return usd / ethPriceUsd;
+}
+
+export function formatEth(value: number | null | undefined): string {
+  if (value == null || Number.isNaN(value)) return "--";
+  const sign = value < 0 ? "-" : "";
+  const abs = Math.abs(value);
+  if (abs >= 1000) return `${sign}${(abs / 1000).toFixed(2)}K Ξ`;
+  if (abs >= 1) return `${sign}${abs.toFixed(4)} Ξ`;
+  if (abs >= 0.0001) return `${sign}${abs.toFixed(6)} Ξ`;
+  return `${sign}${abs.toExponential(2)} Ξ`;
+}
+
+export type PnlDisplayCurrency = "eth" | "usd";
+
+export function formatPnlValue(
+  usd: number | null | undefined,
+  currency: PnlDisplayCurrency,
+  ethPriceUsd: number | null | undefined
+): string {
+  if (currency === "usd") return formatUsd(usd);
+  return formatEth(usdToEth(usd, ethPriceUsd));
+}
