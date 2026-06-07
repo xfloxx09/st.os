@@ -41,7 +41,7 @@ function quantityFromValue(value: string | number | undefined): string {
 
 export async function fetchBlockscoutHolders(
   contractAddress: string,
-  limit = 500
+  limit = 250
 ): Promise<RawHolder[]> {
   const holders: RawHolder[] = [];
   const seen = new Set<string>();
@@ -92,7 +92,7 @@ export async function fetchBlockscoutHolders(
 
 export async function fetchAllBlockscoutHolders(
   contractAddress: string,
-  maxHolders = 500
+  maxHolders = 250
 ): Promise<{ holders: RawHolder[]; capped: boolean }> {
   const holders = await fetchBlockscoutHolders(contractAddress, maxHolders);
   return { holders, capped: holders.length >= maxHolders };

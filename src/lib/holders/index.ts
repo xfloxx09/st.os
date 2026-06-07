@@ -6,8 +6,8 @@ import {
 
 export type HolderSource = "etherscan" | "blockscout";
 
-const FREE_MAX_HOLDERS = 500;
-const PRO_MAX_HOLDERS = 2500;
+/** Top N holders by balance — paginated, not a full token holder census. */
+export const HOLDER_FETCH_LIMIT = 250;
 
 export interface HolderFetchResult {
   holders: RawHolder[];
@@ -51,10 +51,10 @@ function dedupeAndSort(holders: RawHolder[]): RawHolder[] {
 
 export async function fetchTopHolders(
   contractAddress: string,
-  _limit = 100,
+  limit = HOLDER_FETCH_LIMIT,
   options?: { isPro?: boolean }
 ): Promise<HolderFetchResult> {
-  const maxHolders = options?.isPro ? PRO_MAX_HOLDERS : FREE_MAX_HOLDERS;
+  const maxHolders = limit;
 
   try {
     const etherscan = await fetchAllTokenHolders(contractAddress, maxHolders);
@@ -99,7 +99,7 @@ export async function fetchTopHolders(
       warning: isProOnly
         ? options?.isPro
           ? "Etherscan Pro API key required on server — using Blockscout fallback"
-          : "Free tier: Blockscout holders (up to 500). Upgrade to EXPOSED.OS Pro for Etherscan pipeline."
+          : `Free tier: Blockscout top ${HOLDER_FETCH_LIMIT} holders. Upgrade to EXPOSED.OS Pro for Etherscan pipeline.`
         : blockscout.capped
           ? `Showing top ${maxHolders} holders — token may have more.`
           : undefined,

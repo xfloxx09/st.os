@@ -3,7 +3,7 @@ import {
   fetchContractSource,
   fetchTokenInfo,
 } from "@/lib/etherscan";
-import { fetchTopHolders } from "@/lib/holders";
+import { fetchTopHolders, HOLDER_FETCH_LIMIT } from "@/lib/holders";
 import { fetchDexTokenData } from "@/lib/dexscreener";
 import { checkHoneypot } from "@/lib/honeypot";
 import {
@@ -73,13 +73,13 @@ export async function analyzeContractAddress(
       fetchContractCreation(address).catch(() => null),
       fetchContractSource(address).catch(() => null),
       checkHoneypot(address),
-      fetchTopHolders(address, 500, { isPro: options?.isPro }).catch(() => ({
+      fetchTopHolders(address, HOLDER_FETCH_LIMIT, { isPro: options?.isPro }).catch(() => ({
         holders: [],
         source: "blockscout" as const,
         warning: "Failed to fetch holders",
         proRequired: false,
         capped: false,
-        maxFetched: 0,
+        maxFetched: HOLDER_FETCH_LIMIT,
       })),
     ]);
 
