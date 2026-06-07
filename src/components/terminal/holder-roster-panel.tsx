@@ -18,13 +18,15 @@ import {
 
   walletTrackKey,
 
+  networkResultKey,
+
 } from "@/stores/app-store";
 
 import Link from "next/link";
 
 import type { WalletProfile, WalletTrackSnapshot } from "@/lib/analyze/types";
 
-import { fetchFundTrace } from "@/lib/terminal/phase-actions";
+import { fetchFundTrace, fetchWalletNetwork } from "@/lib/terminal/phase-actions";
 
 
 
@@ -66,7 +68,9 @@ export function HolderRosterPanel({
 
   const [loadingWallet, setLoadingWallet] = useState<string | null>(null);
 
-  const [loadingAction, setLoadingAction] = useState<"analyze" | "track" | null>(null);
+  const [loadingAction, setLoadingAction] = useState<
+    "analyze" | "track" | "network" | null
+  >(null);
 
   const [tracingFunds, setTracingFunds] = useState(false);
 
@@ -93,6 +97,8 @@ export function HolderRosterPanel({
   const setFundTrace = useAppStore((s) => s.setFundTrace);
   const toggleCrossCompare = useAppStore((s) => s.toggleCrossCompare);
   const crossCompareSelection = useAppStore((s) => s.crossCompareSelection);
+  const openNetworkPanel = useAppStore((s) => s.openNetworkPanel);
+  const setNetworkResult = useAppStore((s) => s.setNetworkResult);
 
 
 
@@ -225,6 +231,34 @@ export function HolderRosterPanel({
   };
 
 
+
+  const onNetwork = async (holder: HolderEntry) => {
+    if (!canAct) {
+      setAnalyzeError("Connect Telegram for network map.");
+      return;
+    }
+    setLoadingWallet(holder.address);
+    setLoadingAction("network");
+    setAnalyzeError(null);
+    setActiveProcesses(useAppStore.getState().activeProcesses + 1);
+    const start = startTimer();
+    try {
+      const result = await fetchWalletNetwork(
+        holder.address,
+        90,
+        contractAddress
+      );
+      setNetworkResult(networkResultKey(holder.address, 90), result);
+      openNetworkPanel(holder.address, contractAddress, 90);
+      useAppStore.getState().setLastQueryMs(elapsedMs(start));
+    } catch (err) {
+      setAnalyzeError(err instanceof Error ? err.message : "Network map failed");
+    } finally {
+      setLoadingWallet(null);
+      setLoadingAction(null);
+      setActiveProcesses(Math.max(0, useAppStore.getState().activeProcesses - 1));
+    }
+  };
 
   const onTrack = async (holder: HolderEntry) => {
 
@@ -579,6 +613,34 @@ export function HolderRosterPanel({
                           ? "..."
 
                           : "TRACK"}
+
+                      </button>
+
+                      <button
+
+                        type="button"
+
+                        onClick={() => void onNetwork(holder)}
+
+                        disabled={
+
+                          !canAct ||
+
+                          (loadingWallet === holder.address && loadingAction === "network")
+
+                        }
+
+                        className="border border-[var(--warning)] px-2 py-0.5 text-[10px] text-[var(--warning)] hover:bg-[var(--warning)] hover:text-[var(--bg)] disabled:opacity-40"
+
+                        title="Map wallet friends & co-buys"
+
+                      >
+
+                        {loadingWallet === holder.address && loadingAction === "network"
+
+                          ? "..."
+
+                          : "NET"}
 
                       </button>
 

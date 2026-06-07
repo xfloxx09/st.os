@@ -24,9 +24,13 @@ import { CrossAnalysisPanel } from "@/components/terminal/cross-analysis-panel";
 
 import { FundTracerPanel } from "@/components/terminal/fund-tracer-panel";
 
+import { WalletNetworkPanel } from "@/components/terminal/wallet-network-panel";
+
 import {
 
   crossAnalysisKey,
+
+  networkResultKey,
 
   getWindowGroups,
 
@@ -59,6 +63,8 @@ export function Workspace() {
   const crossAnalysisResults = useAppStore((s) => s.crossAnalysisResults);
 
   const fundTraceResults = useAppStore((s) => s.fundTraceResults);
+
+  const networkResults = useAppStore((s) => s.networkResults);
 
   const analyzeError = useAppStore((s) => s.analyzeError);
 
@@ -238,6 +244,26 @@ export function Workspace() {
 
               : null;
 
+            const networkKey =
+
+              activePanel.walletAddress && activePanel.networkWindowDays
+
+                ? networkResultKey(
+
+                    activePanel.walletAddress,
+
+                    activePanel.networkWindowDays
+
+                  )
+
+                : activePanel.walletAddress
+
+                  ? networkResultKey(activePanel.walletAddress, 90)
+
+                  : null;
+
+            const networkResult = networkKey ? networkResults[networkKey] : null;
+
 
 
             return (
@@ -333,6 +359,26 @@ export function Workspace() {
                   <p className="scan-line text-[var(--text-secondary)]">
 
                     TRACING FUND ORIGINS ACROSS HOLDERS...
+
+                  </p>
+
+                ) : activePanel.type === "WALLET_NETWORK" && networkResult ? (
+
+                  <WalletNetworkPanel
+
+                    result={networkResult}
+
+                    walletAddress={activePanel.walletAddress!}
+
+                    contractAddress={activePanel.contractAddress}
+
+                  />
+
+                ) : activePanel.type === "WALLET_NETWORK" ? (
+
+                  <p className="scan-line text-[var(--text-secondary)]">
+
+                    MAPPING WALLET SYNDICATE... TRACING CO-BUYS...
 
                   </p>
 

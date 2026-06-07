@@ -84,3 +84,18 @@ export async function fetchTokenTransactions(
     sort: "asc",
   });
 }
+
+export async function fetchAllTokenTransactions(
+  walletAddress: string,
+  page = 1,
+  offset = 200
+): Promise<TokenTx[]> {
+  return etherscanFetch<TokenTx[]>({
+    module: "account",
+    action: "tokentx",
+    address: walletAddress,
+    page: String(page),
+    offset: String(offset),
+    sort: "desc",
+  });
+}

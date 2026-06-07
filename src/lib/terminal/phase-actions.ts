@@ -1,6 +1,8 @@
+import type { NetworkWindow } from "@/lib/analyze/wallet-network";
 import type {
   CrossAnalysisResult,
   FundTraceResult,
+  WalletNetworkResult,
   WalletProfile,
   WalletTrackSnapshot,
 } from "@/lib/analyze/types";
@@ -43,6 +45,22 @@ export async function fetchWalletAnalyze(
   const data = await res.json();
   if (!res.ok) throw new Error(data.error ?? "Analyze failed");
   return data as WalletProfile;
+}
+
+export async function fetchWalletNetwork(
+  wallet: string,
+  windowDays: NetworkWindow = 90,
+  contract?: string | null
+): Promise<WalletNetworkResult> {
+  const params = new URLSearchParams({
+    wallet,
+    window: String(windowDays),
+  });
+  if (contract) params.set("contract", contract);
+  const res = await fetch(`/api/analyze/network?${params}`);
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error ?? "Network analysis failed");
+  return data as WalletNetworkResult;
 }
 
 export async function fetchTrackRefresh(

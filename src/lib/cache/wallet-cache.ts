@@ -7,7 +7,8 @@ export type CacheType =
   | "fund_origin"
   | "portfolio"
   | "cross_analysis"
-  | "ca_analysis";
+  | "ca_analysis"
+  | "wallet_network";
 
 const TTL_MINUTES: Record<CacheType, number> = {
   profile: 24 * 60,
@@ -17,6 +18,7 @@ const TTL_MINUTES: Record<CacheType, number> = {
   fund_origin: 48 * 60,
   cross_analysis: 30,
   ca_analysis: 15,
+  wallet_network: 60,
 };
 
 export function cacheExpiry(cacheType: CacheType): Date {

@@ -176,3 +176,80 @@ export interface CrossAnalysisResult {
   fetchedAt: string;
   cached: boolean;
 }
+
+export type NetworkClusterVerdict =
+  | "WINNING_SYNDICATE"
+  | "LOSING_BAGHOLDERS"
+  | "MIXED"
+  | "UNKNOWN";
+
+export type PnlAlignment =
+  | "WINNING_TOGETHER"
+  | "LOSING_TOGETHER"
+  | "MIXED"
+  | "UNKNOWN";
+
+export interface NetworkFriend {
+  address: string;
+  label: string | null;
+  relationTypes: string[];
+  commonTokens: Array<{
+    contractAddress: string;
+    symbol: string;
+    seedBoughtAt: string;
+    friendBoughtAt: string;
+    daysApart: number;
+  }>;
+  bondScore: number;
+  estimatedPnlUsd: number | null;
+  pnlAlignment: PnlAlignment;
+}
+
+export interface CommonTokenCluster {
+  contractAddress: string;
+  symbol: string;
+  friendCount: number;
+  seedPositionUsd: number | null;
+  avgFriendPositionUsd: number | null;
+  pnlAlignment: PnlAlignment;
+  linkedWallets: string[];
+}
+
+export interface NetworkGraphNode {
+  id: string;
+  type: "wallet" | "token" | "funding";
+  label: string;
+  address?: string;
+  isSeed?: boolean;
+  bondScore?: number;
+  pnlAlignment?: PnlAlignment;
+  tier: string;
+}
+
+export interface NetworkGraphEdge {
+  id: string;
+  from: string;
+  to: string;
+  type: "CO_BOUGHT" | "FUNDED_BY" | "TRANSFERRED" | "SHARED_TOKEN";
+  label: string;
+  strength: number;
+  tokenSymbol?: string;
+  timestamp?: string;
+}
+
+export interface WalletNetworkResult {
+  seedWallet: string;
+  contextContract: string | null;
+  windowDays: number;
+  friends: NetworkFriend[];
+  commonTokenClusters: CommonTokenCluster[];
+  graph: {
+    nodes: NetworkGraphNode[];
+    edges: NetworkGraphEdge[];
+  };
+  clusterVerdict: NetworkClusterVerdict;
+  suspicionScore: number;
+  summary: string;
+  fetchedAt: string;
+  cached: boolean;
+}

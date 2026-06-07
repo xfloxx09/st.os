@@ -95,7 +95,7 @@ export async function getPublicPricing(): Promise<PricingPublicResponse> {
       "Direct Etherscan holder pipeline (no Blockscout fallback)",
       "Unlimited CA analysis (no guest cap)",
       "Wallet analyze + live tracking on all holders",
-      "Cross-holder analysis + fund tracer",
+      "Cross-holder analysis + fund tracer + FBI network map",
       "Priority API rate limits",
     ],
     upgradeNote:

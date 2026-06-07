@@ -1,9 +1,38 @@
 "use client";
 
+import { useState } from "react";
 import type { WalletProfile } from "@/lib/analyze/types";
 import { formatPercent, formatUsd, truncateAddress } from "@/lib/ethereum";
+import { fetchWalletNetwork } from "@/lib/terminal/phase-actions";
+import { elapsedMs, startTimer } from "@/lib/timing";
+import { networkResultKey, useAppStore } from "@/stores/app-store";
 
 export function WalletProfilePanel({ profile }: { profile: WalletProfile }) {
+  const [mapping, setMapping] = useState(false);
+  const openNetworkPanel = useAppStore((s) => s.openNetworkPanel);
+  const setNetworkResult = useAppStore((s) => s.setNetworkResult);
+  const setAnalyzeError = useAppStore((s) => s.setAnalyzeError);
+
+  const onMapNetwork = async () => {
+    setMapping(true);
+    setAnalyzeError(null);
+    const start = startTimer();
+    try {
+      const result = await fetchWalletNetwork(
+        profile.walletAddress,
+        90,
+        profile.contractAddress
+      );
+      setNetworkResult(networkResultKey(profile.walletAddress, 90), result);
+      openNetworkPanel(profile.walletAddress, profile.contractAddress, 90);
+      useAppStore.getState().setLastQueryMs(elapsedMs(start));
+    } catch (err) {
+      setAnalyzeError(err instanceof Error ? err.message : "Network map failed");
+    } finally {
+      setMapping(false);
+    }
+  };
+
   return (
     <div className="space-y-4 text-[11px]">
       <div className="flex items-start justify-between gap-4">
@@ -16,6 +45,14 @@ export function WalletProfilePanel({ profile }: { profile: WalletProfile }) {
           </div>
         </div>
         <div className="text-right">
+          <button
+            type="button"
+            onClick={() => void onMapNetwork()}
+            disabled={mapping}
+            className="mb-1 border border-[var(--warning)] px-2 py-0.5 text-[9px] text-[var(--warning)] disabled:opacity-40"
+          >
+            {mapping ? "..." : "MAP NETWORK"}
+          </button>
           <div className="text-[var(--warning)]">{profile.behaviorLabel}</div>
           <div className="text-[10px] text-[var(--text-secondary)]">
             {profile.behaviorConfidence} CONFIDENCE

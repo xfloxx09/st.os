@@ -4,6 +4,7 @@ import type {
   CaAnalysisResult,
   CrossAnalysisResult,
   FundTraceResult,
+  WalletNetworkResult,
   WalletProfile,
   WalletTrackSnapshot,
 } from "@/lib/analyze/types";
@@ -19,6 +20,8 @@ export type PanelType =
   | "WALLET_PROFILE"
 
   | "WALLET_TRACK"
+
+  | "WALLET_NETWORK"
 
   | "CROSS_ANALYSIS"
 
@@ -55,6 +58,8 @@ export interface Panel {
   walletAddress?: string;
 
   compareContracts?: string[];
+
+  networkWindowDays?: number;
 
 }
 
@@ -164,6 +169,8 @@ interface AppState {
 
   walletTracks: Record<string, WalletTrackSnapshot>;
 
+  networkResults: Record<string, WalletNetworkResult>;
+
   crossAnalysisResults: Record<string, CrossAnalysisResult>;
 
   fundTraceResults: Record<string, FundTraceResult>;
@@ -203,6 +210,8 @@ interface AppState {
   setWalletProfile: (key: string, profile: WalletProfile) => void;
 
   setWalletTrack: (key: string, snapshot: WalletTrackSnapshot) => void;
+
+  setNetworkResult: (key: string, result: WalletNetworkResult) => void;
 
   setCrossAnalysis: (key: string, result: CrossAnalysisResult) => void;
 
@@ -262,6 +271,16 @@ interface AppState {
 
   ) => void;
 
+  openNetworkPanel: (
+
+    walletAddress: string,
+
+    contractAddress?: string | null,
+
+    windowDays?: number
+
+  ) => void;
+
   openCrossAnalysisPanel: (contracts: string[]) => void;
 
   openFundTracerPanel: (contractAddress: string) => void;
@@ -295,6 +314,14 @@ export function crossAnalysisKey(contracts: string[]) {
     .sort()
 
     .join("|");
+
+}
+
+
+
+export function networkResultKey(wallet: string, windowDays: number) {
+
+  return `${wallet.toLowerCase()}|network|${windowDays}`;
 
 }
 
@@ -366,6 +393,8 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   walletTracks: {},
 
+  networkResults: {},
+
   crossAnalysisResults: {},
 
   fundTraceResults: {},
@@ -421,6 +450,14 @@ export const useAppStore = create<AppState>((set, get) => ({
     set((s) => ({
 
       walletTracks: { ...s.walletTracks, [key]: snapshot },
+
+    })),
+
+  setNetworkResult: (key, result) =>
+
+    set((s) => ({
+
+      networkResults: { ...s.networkResults, [key]: result },
 
     })),
 
@@ -1065,6 +1102,76 @@ export const useAppStore = create<AppState>((set, get) => ({
           height: 500,
 
           compareContracts: contracts,
+
+        },
+
+        s.nextZIndex
+
+      );
+
+      const exists = s.panels.some((p) => p.id === id);
+
+      if (exists) {
+
+        return {
+
+          panels: s.panels.map((p) =>
+
+            p.id === id ? { ...p, minimized: false, zIndex: s.nextZIndex } : p
+
+          ),
+
+          activeTabByGroup: { ...s.activeTabByGroup, [id]: id },
+
+          nextZIndex: s.nextZIndex + 1,
+
+        };
+
+      }
+
+      return {
+
+        panels: [...s.panels, panel],
+
+        activeTabByGroup: { ...s.activeTabByGroup, [id]: id },
+
+        nextZIndex: s.nextZIndex + 1,
+
+      };
+
+    }),
+
+  openNetworkPanel: (walletAddress, contractAddress, windowDays = 90) =>
+
+    set((s) => {
+
+      const id = `network-${walletAddress}-${windowDays}`;
+
+      const offset = (s.panels.length % 5) * 22;
+
+      const panel = withPanelDefaults(
+
+        {
+
+          id,
+
+          type: "WALLET_NETWORK",
+
+          title: `NETWORK · ${walletAddress.slice(0, 8)}`,
+
+          x: 120 + offset,
+
+          y: 90 + offset,
+
+          width: 680,
+
+          height: 560,
+
+          walletAddress,
+
+          contractAddress: contractAddress ?? undefined,
+
+          networkWindowDays: windowDays,
 
         },
 
