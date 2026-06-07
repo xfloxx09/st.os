@@ -1,0 +1,65 @@
+import type { Generated, Insertable, Selectable } from "kysely";
+
+export interface Database {
+  users: UsersTable;
+  sessions: SessionsTable;
+  search_history: SearchHistoryTable;
+  wallet_cache: WalletCacheTable;
+  rate_limits: RateLimitsTable;
+  schema_migrations: SchemaMigrationsTable;
+}
+
+export interface UsersTable {
+  id: Generated<number>;
+  telegram_id: number;
+  telegram_username: string | null;
+  telegram_first_name: string | null;
+  plan: Generated<string>;
+  created_at: Generated<Date>;
+  last_active: Generated<Date>;
+}
+
+export interface SessionsTable {
+  id: Generated<number>;
+  user_id: number;
+  token: string;
+  expires_at: Date;
+  created_at: Generated<Date>;
+}
+
+export interface SearchHistoryTable {
+  id: Generated<number>;
+  user_id: number;
+  contract_address: string;
+  token_symbol: string | null;
+  token_name: string | null;
+  searched_at: Generated<Date>;
+}
+
+export interface WalletCacheTable {
+  id: Generated<number>;
+  wallet_address: string;
+  cache_type: string;
+  data: unknown;
+  cached_at: Generated<Date>;
+  expires_at: Date;
+}
+
+export interface RateLimitsTable {
+  id: Generated<number>;
+  user_id: number;
+  action: string;
+  count: Generated<number>;
+  window_start: Generated<Date>;
+}
+
+export interface SchemaMigrationsTable {
+  id: Generated<number>;
+  filename: string;
+  applied_at: Generated<Date>;
+}
+
+export type User = Selectable<UsersTable>;
+export type NewUser = Insertable<UsersTable>;
+export type Session = Selectable<SessionsTable>;
+export type NewSession = Insertable<SessionsTable>;
