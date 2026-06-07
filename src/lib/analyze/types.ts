@@ -359,7 +359,9 @@ export interface ProTrackWallet {
   intelScore: number;
   trackScore: number;
   firstMoverScore: number;
-  followers48h: number;
+  followers30m: number;
+  minsAfterFirstBuyer: number | null;
+  minsBehindLeader: number | null;
   buyRank: number | null;
   pnlDay: WindowPnlSnapshot;
   pnlWeek: WindowPnlSnapshot;

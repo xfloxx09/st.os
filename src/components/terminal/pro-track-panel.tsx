@@ -89,8 +89,8 @@ export function ProTrackPanel({
       <div className="border border-[var(--warning)]/60 bg-[var(--warning)]/5 p-4 text-[10px]">
         <p className="text-[var(--warning)]">★ PRO TRACK — golden feature</p>
         <p className="mt-2 text-[var(--text-secondary)]">
-          Rank wallets to track by PnL (day/week/month), intel score, early-buy
-          patterns, and strategy labels. Includes price chart with exact buy/sell
+          Degen-mode wallet ranking — 30m copy-trade window, snipe timing, PnL
+          (day/week/month), intel score, and strategy labels with buy/sell chart
           markers.
         </p>
         <Link href="/pricing" className="mt-3 inline-block text-[var(--accent)] underline">
@@ -160,8 +160,11 @@ export function ProTrackPanel({
           </p>
           <p className="mt-1 text-[9px] text-[var(--text-secondary)]">
             Intel {selectedWallet.intelScore} · Track score {selectedWallet.trackScore}
-            {selectedWallet.followers48h > 0
-              ? ` · ${selectedWallet.followers48h} followers (48h)`
+            {selectedWallet.followers30m > 0
+              ? ` · ${selectedWallet.followers30m} copied in 30m`
+              : ""}
+            {selectedWallet.minsAfterFirstBuyer != null
+              ? ` · ${selectedWallet.minsAfterFirstBuyer}m from first buyer`
               : ""}
           </p>
           {selectedWallet.trackReasons.length > 0 ? (
@@ -271,7 +274,7 @@ export function ProTrackPanel({
 
       {loading && wallets.length === 0 ? (
         <p className="scan-line text-[10px] text-[var(--warning)]">
-          SCANNING ALPHA TARGETS · PNL WINDOWS · FIRST-MOVER INTEL...
+          SCANNING DEGEN ALPHA · 30M COPY WINDOW · PNL · SNIPER INTEL...
         </p>
       ) : null}
     </div>

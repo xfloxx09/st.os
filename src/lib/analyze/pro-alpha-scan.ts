@@ -95,12 +95,12 @@ function classifyTrades(
 function intelScore(
   firstMover: number,
   monthPnl: number | null,
-  followers: number,
+  followers30m: number,
   holderRank: number | null
 ): number {
   let score = 40;
-  score += Math.min(30, firstMover * 0.3);
-  score += Math.min(20, followers * 3);
+  score += Math.min(35, firstMover * 0.35);
+  score += Math.min(30, followers30m * 10);
   if (monthPnl != null && monthPnl > 0) score += Math.min(15, monthPnl / 500);
   if (holderRank != null && holderRank <= 10) score += 8;
   return Math.min(100, Math.round(score));
@@ -110,13 +110,13 @@ function trackScore(
   intel: number,
   monthPnl: number | null,
   firstMover: number,
-  followers: number
+  followers30m: number
 ): number {
   const pnlPart =
     monthPnl == null ? 0 : Math.min(30, Math.max(-10, monthPnl / 200));
   return Math.min(
     100,
-    Math.round(intel * 0.45 + firstMover * 0.25 + followers * 2 + pnlPart)
+    Math.round(intel * 0.45 + firstMover * 0.25 + followers30m * 4 + pnlPart)
   );
 }
 
@@ -215,7 +215,7 @@ export async function scanProAlphaTargets(
         const intel = intelScore(
           firstBuy?.firstMoverScore ?? 0,
           monthPnl.totalPnlUsd,
-          firstBuy?.followers48h ?? 0,
+          firstBuy?.followers30m ?? 0,
           holder?.rank ?? null
         );
         const { strategy, detail } = classifyWalletStrategy({
@@ -227,8 +227,11 @@ export async function scanProAlphaTargets(
         });
 
         const reasons: string[] = [];
-        if (firstBuy && firstBuy.followers48h >= 3) {
-          reasons.push(`${firstBuy.followers48h} wallets copied within 48h`);
+        if (firstBuy && firstBuy.followers30m >= 2) {
+          reasons.push(`${firstBuy.followers30m} wallets copied within 30m`);
+        }
+        if (firstBuy?.inSnipeWindow) {
+          reasons.push("Bought in launch snipe window (≤30m from first buyer)");
         }
         if ((monthPnl.totalPnlUsd ?? 0) > 0) {
           reasons.push("Positive 30d PnL on token");
@@ -254,10 +257,12 @@ export async function scanProAlphaTargets(
             intel,
             monthPnl.totalPnlUsd,
             firstBuy?.firstMoverScore ?? 0,
-            firstBuy?.followers48h ?? 0
+            firstBuy?.followers30m ?? 0
           ),
           firstMoverScore: firstBuy?.firstMoverScore ?? 0,
-          followers48h: firstBuy?.followers48h ?? 0,
+          followers30m: firstBuy?.followers30m ?? 0,
+          minsAfterFirstBuyer: firstBuy?.minsAfterFirstBuyer ?? null,
+          minsBehindLeader: firstBuy?.minsBehindLeader ?? null,
           buyRank: firstBuy?.buyRank ?? null,
           pnlDay: windowPnl(txs, wallet, txDecimals, priceUsd, 1),
           pnlWeek: windowPnl(txs, wallet, txDecimals, priceUsd, 7),
