@@ -16,7 +16,7 @@ import { TokenOverviewPanel } from "@/components/terminal/token-overview-panel";
 
 import { HolderRosterPanel } from "@/components/terminal/holder-roster-panel";
 
-import { WalletProfilePanel } from "@/components/terminal/wallet-profile-panel";
+import { WalletHubPanel } from "@/components/terminal/wallet-hub-panel";
 
 import { WalletTrackerPanel } from "@/components/terminal/wallet-tracker-panel";
 
@@ -324,17 +324,17 @@ export function Workspace() {
 
                   />
 
-                ) : activePanel.type === "WALLET_PROFILE" && walletProfile ? (
+                ) : activePanel.type === "WALLET_PROFILE" &&
+                  activePanel.walletAddress &&
+                  activePanel.contractAddress ? (
 
-                  <WalletProfilePanel profile={walletProfile} />
-
-                ) : activePanel.type === "WALLET_PROFILE" ? (
-
-                  <p className="scan-line text-[var(--text-secondary)]">
-
-                    ANALYZING WALLET... SCANNING TRADES...
-
-                  </p>
+                  <WalletHubPanel
+                    walletAddress={activePanel.walletAddress}
+                    contractAddress={activePanel.contractAddress}
+                    holderRank={activePanel.holderRank}
+                    percentOfSupply={activePanel.holderPercent}
+                    initialProfile={walletProfile}
+                  />
 
                 ) : activePanel.type === "WALLET_TRACK" && walletTrack ? (
 

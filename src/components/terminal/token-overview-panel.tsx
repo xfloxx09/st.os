@@ -75,7 +75,7 @@ export function TokenOverviewPanel({
     try {
       const profile = await fetchWalletAnalyze(overview.deployer, ca);
       setWalletProfile(walletProfileKey(overview.deployer, ca), profile);
-      openWalletPanel(overview.deployer, ca, 0);
+      openWalletPanel(overview.deployer, ca, { label: "DEPLOYER" });
       useAppStore.getState().setLastQueryMs(elapsedMs(start));
     } catch (err) {
       setAnalyzeError(err instanceof Error ? err.message : "Deployer analyze failed");

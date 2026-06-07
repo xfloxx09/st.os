@@ -16,11 +16,10 @@ import { elapsedMs, startTimer } from "@/lib/timing";
 
 import { truncateAddress } from "@/lib/ethereum";
 
-import type { WalletTrackSnapshot } from "@/lib/analyze/types";
-
 import {
   crossAnalysisKey,
-  walletTrackKey,
+  type TrackedFolderItem,
+  type TrackedWalletItem,
 } from "@/stores/app-store";
 import { fetchCrossAnalysis } from "@/lib/terminal/phase-actions";
 
@@ -38,17 +37,23 @@ export function Sidebar() {
 
   const trackedWallets = useAppStore((s) => s.trackedWallets);
 
+  const trackedFolders = useAppStore((s) => s.trackedFolders);
+
+  const walletAliases = useAppStore((s) => s.walletAliases);
+
   const setTrackedWallets = useAppStore((s) => s.setTrackedWallets);
+
+  const setTrackedFolders = useAppStore((s) => s.setTrackedFolders);
+
+  const updateTrackedWallet = useAppStore((s) => s.updateTrackedWallet);
+
+  const openWalletPanel = useAppStore((s) => s.openWalletPanel);
 
   const setSearchHistory = useAppStore((s) => s.setSearchHistory);
 
   const setAnalysis = useAppStore((s) => s.setAnalysis);
 
   const openAnalysisPanels = useAppStore((s) => s.openAnalysisPanels);
-
-  const openTrackPanel = useAppStore((s) => s.openTrackPanel);
-
-  const setWalletTrack = useAppStore((s) => s.setWalletTrack);
 
   const setLastQueryMs = useAppStore((s) => s.setLastQueryMs);
 
@@ -72,9 +77,13 @@ export function Sidebar() {
 
   const [loadingId, setLoadingId] = useState<number | null>(null);
 
-  const [loadingWallet, setLoadingWallet] = useState<string | null>(null);
-
   const [runningCross, setRunningCross] = useState(false);
+
+  const [newFolderName, setNewFolderName] = useState("");
+
+  const [showNewFolder, setShowNewFolder] = useState(false);
+
+  const [collapsedFolders, setCollapsedFolders] = useState<Record<number, boolean>>({});
 
 
 
@@ -136,54 +145,51 @@ export function Sidebar() {
 
 
 
-  const openTracked = async (walletAddress: string, sourceContract: string | null) => {
+  const displayName = (address: string, label: string | null) =>
+    walletAliases[address.toLowerCase()] ?? label ?? truncateAddress(address);
 
-    setLoadingWallet(walletAddress);
-
-    setAnalyzeError(null);
-
-    setActiveProcesses(useAppStore.getState().activeProcesses + 1);
-
-    const start = startTimer();
-
-
-
-    try {
-
-      const params = new URLSearchParams({ wallet: walletAddress });
-
-      if (sourceContract) params.set("contract", sourceContract);
-
-
-
-      const res = await fetch(`/api/track/refresh?${params}`);
-
-      const data = await res.json();
-
-      if (!res.ok) throw new Error(data.error ?? "Track refresh failed");
-
-
-
-      const snapshot = data as WalletTrackSnapshot;
-
-      setWalletTrack(walletTrackKey(walletAddress), snapshot);
-
-      openTrackPanel(walletAddress, sourceContract, snapshot.trackLabel);
-
-      setLastQueryMs(elapsedMs(start));
-
-    } catch (err) {
-
-      setAnalyzeError(err instanceof Error ? err.message : "Track refresh failed");
-
-    } finally {
-
-      setLoadingWallet(null);
-
-      setActiveProcesses(Math.max(0, useAppStore.getState().activeProcesses - 1));
-
+  const openTracked = (walletAddress: string, sourceContract: string | null, label: string | null) => {
+    if (!sourceContract) {
+      setAnalyzeError("No source contract for this wallet.");
+      return;
     }
+    openWalletPanel(walletAddress, sourceContract, {
+      label: displayName(walletAddress, label),
+    });
+  };
 
+  const createFolder = async () => {
+    const name = newFolderName.trim();
+    if (!name) return;
+    try {
+      const res = await fetch("/api/track/folders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Failed to create folder");
+      setTrackedFolders([...trackedFolders, data.folder]);
+      setNewFolderName("");
+      setShowNewFolder(false);
+    } catch (err) {
+      setAnalyzeError(err instanceof Error ? err.message : "Folder create failed");
+    }
+  };
+
+  const moveToFolder = async (walletAddress: string, folderId: number | null) => {
+    try {
+      const res = await fetch("/api/track", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ walletAddress, folderId }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Move failed");
+      updateTrackedWallet(walletAddress, { folderId });
+    } catch (err) {
+      setAnalyzeError(err instanceof Error ? err.message : "Move failed");
+    }
   };
 
 
@@ -482,78 +488,125 @@ export function Sidebar() {
 
           )
 
-        ) : trackedWallets.length === 0 ? (
-
-          <p className="px-2 py-4 text-[11px] leading-relaxed text-[var(--text-secondary)]">
-
-            No tracked wallets. Use TRACK on a holder to add live monitoring.
-
-          </p>
-
         ) : (
-
-          <ul className="space-y-1">
-
-            {trackedWallets.map((item) => (
-
-              <li key={item.id} className="flex items-stretch gap-1">
-
+          <>
+            <div className="mb-2 flex items-center justify-between gap-1 px-1">
+              <p className="text-[9px] text-[var(--text-secondary)]">
+                Click wallet to open intel
+              </p>
+              <button
+                type="button"
+                onClick={() => setShowNewFolder((v) => !v)}
+                className="text-[9px] text-[var(--accent)] hover:underline"
+              >
+                + FOLDER
+              </button>
+            </div>
+            {showNewFolder ? (
+              <div className="mb-2 flex gap-1 px-1">
+                <input
+                  type="text"
+                  value={newFolderName}
+                  onChange={(e) => setNewFolderName(e.target.value)}
+                  placeholder="Folder name"
+                  className="flex-1 border border-[var(--border)] bg-[var(--bg)] px-1.5 py-1 text-[10px] outline-none focus:border-[var(--accent)]"
+                />
                 <button
-
                   type="button"
-
-                  onClick={() => void openTracked(item.walletAddress, item.sourceContract)}
-
-                  disabled={loadingWallet === item.walletAddress}
-
-                  className="flex min-w-0 flex-1 flex-col border border-transparent px-2 py-1.5 text-left text-[11px] hover:border-[var(--border)] hover:bg-[var(--bg)] disabled:opacity-50"
-
+                  onClick={() => void createFolder()}
+                  className="border border-[var(--accent)] px-1.5 text-[9px] text-[var(--accent)]"
                 >
-
-                  <span className="truncate text-[var(--text-primary)]">
-
-                    {loadingWallet === item.walletAddress
-
-                      ? "SYNCING..."
-
-                      : (item.label ?? truncateAddress(item.walletAddress))}
-
-                  </span>
-
-                  {item.lastCheckedAt ? (
-
-                    <span className="text-[9px] text-[var(--text-secondary)]">
-
-                      {new Date(item.lastCheckedAt).toLocaleString()}
-
-                    </span>
-
-                  ) : null}
-
+                  ADD
                 </button>
-
-                <button
-
-                  type="button"
-
-                  onClick={() => void untrackWallet(item.walletAddress)}
-
-                  className="shrink-0 border border-transparent px-1.5 text-[10px] text-[var(--text-secondary)] hover:border-[var(--danger)] hover:text-[var(--danger)]"
-
-                  title="Untrack wallet"
-
-                >
-
-                  ×
-
-                </button>
-
-              </li>
-
-            ))}
-
-          </ul>
-
+              </div>
+            ) : null}
+            {trackedWallets.length === 0 ? (
+              <p className="px-2 py-2 text-[10px] text-[var(--text-secondary)]">
+                No tracked wallets. Open a wallet and hit TRACK.
+              </p>
+            ) : (
+              <div className="space-y-3">
+                {trackedFolders.map((folder) => {
+                  const wallets = trackedWallets.filter(
+                    (w) => w.folderId === folder.id
+                  );
+                  if (wallets.length === 0) return null;
+                  const collapsed = collapsedFolders[folder.id];
+                  return (
+                    <div key={folder.id}>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setCollapsedFolders((c) => ({
+                            ...c,
+                            [folder.id]: !c[folder.id],
+                          }))
+                        }
+                        className="flex w-full items-center gap-1 px-1 text-[10px] text-[var(--warning)]"
+                      >
+                        {collapsed ? "▶" : "▼"} {folder.name} ({wallets.length})
+                      </button>
+                      {!collapsed ? (
+                        <ul className="mt-1 space-y-0.5 pl-2">
+                          {wallets.map((item) => (
+                            <TrackedRow
+                              key={item.id}
+                              item={item}
+                              displayName={displayName(item.walletAddress, item.label)}
+                              folders={trackedFolders}
+                              onOpen={() =>
+                                openTracked(
+                                  item.walletAddress,
+                                  item.sourceContract,
+                                  item.label
+                                )
+                              }
+                              onUntrack={() => void untrackWallet(item.walletAddress)}
+                              onMove={(folderId) =>
+                                void moveToFolder(item.walletAddress, folderId)
+                              }
+                            />
+                          ))}
+                        </ul>
+                      ) : null}
+                    </div>
+                  );
+                })}
+                {(() => {
+                  const unfiled = trackedWallets.filter((w) => !w.folderId);
+                  if (unfiled.length === 0) return null;
+                  return (
+                    <div>
+                      <p className="px-1 text-[10px] text-[var(--text-secondary)]">
+                        UNFILED ({unfiled.length})
+                      </p>
+                      <ul className="mt-1 space-y-0.5">
+                        {unfiled.map((item) => (
+                          <TrackedRow
+                            key={item.id}
+                            item={item}
+                            displayName={displayName(item.walletAddress, item.label)}
+                            folders={trackedFolders}
+                            onOpen={() =>
+                              openTracked(
+                                item.walletAddress,
+                                item.sourceContract,
+                                item.label
+                              )
+                            }
+                            onUntrack={() => void untrackWallet(item.walletAddress)}
+                            onMove={(folderId) =>
+                              void moveToFolder(item.walletAddress, folderId)
+                            }
+                          />
+                        ))}
+                      </ul>
+                    </div>
+                  );
+                })()}
+              </div>
+            )}
+          </>
         )}
 
       </div>
@@ -564,3 +617,61 @@ export function Sidebar() {
 
 }
 
+function TrackedRow({
+  item,
+  displayName,
+  folders,
+  onOpen,
+  onUntrack,
+  onMove,
+}: {
+  item: TrackedWalletItem;
+  displayName: string;
+  folders: TrackedFolderItem[];
+  onOpen: () => void;
+  onUntrack: () => void;
+  onMove: (folderId: number | null) => void;
+}) {
+  return (
+    <li className="group flex items-center gap-0.5">
+      <button
+        type="button"
+        onClick={onOpen}
+        className="flex min-w-0 flex-1 flex-col border border-transparent px-1.5 py-1 text-left text-[10px] hover:border-[var(--border)] hover:bg-[var(--bg)]"
+      >
+        <span className="truncate text-[var(--accent)]">{displayName}</span>
+        {item.lastCheckedAt ? (
+          <span className="text-[8px] text-[var(--text-secondary)]">
+            {new Date(item.lastCheckedAt).toLocaleDateString()}
+          </span>
+        ) : null}
+      </button>
+      {folders.length > 0 ? (
+        <select
+          value={item.folderId ?? ""}
+          onChange={(e) => {
+            const v = e.target.value;
+            onMove(v ? Number(v) : null);
+          }}
+          className="max-w-[52px] border border-[var(--border)] bg-[var(--bg)] text-[8px] text-[var(--text-secondary)] opacity-0 group-hover:opacity-100"
+          title="Move to folder"
+        >
+          <option value="">—</option>
+          {folders.map((f) => (
+            <option key={f.id} value={f.id}>
+              {f.name.slice(0, 8)}
+            </option>
+          ))}
+        </select>
+      ) : null}
+      <button
+        type="button"
+        onClick={onUntrack}
+        className="shrink-0 px-1 text-[10px] text-[var(--text-secondary)] opacity-0 hover:text-[var(--danger)] group-hover:opacity-100"
+        title="Untrack"
+      >
+        ×
+      </button>
+    </li>
+  );
+}

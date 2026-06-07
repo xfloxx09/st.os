@@ -65,6 +65,10 @@ export interface Panel {
 
   networkWindowDays?: number;
 
+  holderRank?: number;
+
+  holderPercent?: number;
+
 }
 
 
@@ -97,9 +101,23 @@ export interface TrackedWalletItem {
 
   notes: string | null;
 
+  folderId: number | null;
+
   createdAt: string;
 
   lastCheckedAt: string | null;
+
+}
+
+export interface TrackedFolderItem {
+
+  id: number;
+
+  name: string;
+
+  sortOrder: number;
+
+  createdAt: string;
 
 }
 
@@ -163,6 +181,10 @@ interface AppState {
 
   trackedWallets: TrackedWalletItem[];
 
+  trackedFolders: TrackedFolderItem[];
+
+  walletAliases: Record<string, string>;
+
   nextZIndex: number;
 
   currentContract: string | null;
@@ -202,6 +224,19 @@ interface AppState {
   setSearchHistory: (items: SearchHistoryItem[]) => void;
 
   setTrackedWallets: (items: TrackedWalletItem[]) => void;
+
+  setTrackedFolders: (items: TrackedFolderItem[]) => void;
+
+  setWalletAliases: (aliases: Record<string, string>) => void;
+
+  setWalletAlias: (walletAddress: string, nickname: string | null) => void;
+
+  updateTrackedWallet: (
+    walletAddress: string,
+    patch: Partial<Pick<TrackedWalletItem, "label" | "folderId" | "notes">>
+  ) => void;
+
+  updatePanelTitle: (panelId: string, title: string) => void;
 
   setSidebarTab: (tab: SidebarTab) => void;
 
@@ -269,7 +304,7 @@ interface AppState {
 
     contractAddress: string,
 
-    rank: number
+    options?: { rank?: number; percent?: number; label?: string | null }
 
   ) => void;
 
@@ -397,6 +432,10 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   trackedWallets: [],
 
+  trackedFolders: [],
+
+  walletAliases: {},
+
   nextZIndex: 1,
 
   currentContract: null,
@@ -436,6 +475,33 @@ export const useAppStore = create<AppState>((set, get) => ({
   setSearchHistory: (items) => set({ searchHistory: items }),
 
   setTrackedWallets: (items) => set({ trackedWallets: items }),
+
+  setTrackedFolders: (items) => set({ trackedFolders: items }),
+
+  setWalletAliases: (aliases) => set({ walletAliases: aliases }),
+
+  setWalletAlias: (walletAddress, nickname) =>
+    set((s) => {
+      const key = walletAddress.toLowerCase();
+      const next = { ...s.walletAliases };
+      if (nickname) next[key] = nickname;
+      else delete next[key];
+      return { walletAliases: next };
+    }),
+
+  updateTrackedWallet: (walletAddress, patch) =>
+    set((s) => ({
+      trackedWallets: s.trackedWallets.map((w) =>
+        w.walletAddress.toLowerCase() === walletAddress.toLowerCase()
+          ? { ...w, ...patch }
+          : w
+      ),
+    })),
+
+  updatePanelTitle: (panelId, title) =>
+    set((s) => ({
+      panels: s.panels.map((p) => (p.id === panelId ? { ...p, title } : p)),
+    })),
 
   setSidebarTab: (tab) => set({ sidebarTab: tab }),
 
@@ -973,13 +1039,22 @@ export const useAppStore = create<AppState>((set, get) => ({
 
     }),
 
-  openWalletPanel: (walletAddress, contractAddress, rank) =>
+  openWalletPanel: (walletAddress, contractAddress, options) =>
 
     set((s) => {
 
       const id = `wallet-${walletAddress}-${contractAddress}`;
 
+      const rank = options?.rank ?? 0;
+
       const offset = (rank % 5) * 24;
+
+      const alias = s.walletAliases[walletAddress.toLowerCase()];
+
+      const title =
+        options?.label ??
+        alias ??
+        (rank > 0 ? `WALLET #${rank}` : `WALLET · ${walletAddress.slice(0, 8)}`);
 
       const panel = withPanelDefaults(
 
@@ -989,19 +1064,23 @@ export const useAppStore = create<AppState>((set, get) => ({
 
           type: "WALLET_PROFILE",
 
-          title: `WALLET #${rank}`,
+          title,
 
           x: 80 + offset,
 
           y: 120 + offset,
 
-          width: 460,
+          width: 480,
 
-          height: 480,
+          height: 520,
 
           contractAddress,
 
           walletAddress,
+
+          holderRank: options?.rank,
+
+          holderPercent: options?.percent,
 
         },
 

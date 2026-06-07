@@ -11,6 +11,8 @@ export interface Database {
   app_settings: AppSettingsTable;
   subscriptions: SubscriptionsTable;
   tracked_wallets: TrackedWalletsTable;
+  tracked_wallet_folders: TrackedWalletFoldersTable;
+  wallet_aliases: WalletAliasesTable;
 }
 
 export interface UsersTable {
@@ -92,6 +94,14 @@ export interface SubscriptionsTable {
   created_at: Generated<Date>;
 }
 
+export interface TrackedWalletFoldersTable {
+  id: Generated<number>;
+  user_id: number;
+  name: string;
+  sort_order: number;
+  created_at: Generated<Date>;
+}
+
 export interface TrackedWalletsTable {
   id: Generated<number>;
   user_id: number;
@@ -99,8 +109,18 @@ export interface TrackedWalletsTable {
   label: string | null;
   source_contract: string | null;
   notes: string | null;
+  folder_id: number | null;
   created_at: Generated<Date>;
   last_checked_at: Date | null;
+}
+
+export interface WalletAliasesTable {
+  id: Generated<number>;
+  user_id: number;
+  wallet_address: string;
+  nickname: string;
+  created_at: Generated<Date>;
+  updated_at: Generated<Date>;
 }
 
 export type User = Selectable<UsersTable>;

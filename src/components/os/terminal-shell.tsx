@@ -16,6 +16,8 @@ export function TerminalShell() {
   const setGuest = useAppStore((s) => s.setGuest);
   const setSearchHistory = useAppStore((s) => s.setSearchHistory);
   const setTrackedWallets = useAppStore((s) => s.setTrackedWallets);
+  const setTrackedFolders = useAppStore((s) => s.setTrackedFolders);
+  const setWalletAliases = useAppStore((s) => s.setWalletAliases);
   const setTelegramBotUsername = useAppStore((s) => s.setTelegramBotUsername);
   const bootComplete = useAppStore((s) => s.bootComplete);
 
@@ -68,8 +70,26 @@ export function TerminalShell() {
         .then((data) => {
           if (data?.wallets) setTrackedWallets(data.wallets);
         });
+      void fetch("/api/track/folders")
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => {
+          if (data?.folders) setTrackedFolders(data.folders);
+        });
+      void fetch("/api/wallet-alias")
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => {
+          if (data?.aliases) setWalletAliases(data.aliases);
+        });
     }
-  }, [sessionQuery.data, setGuest, setSearchHistory, setTrackedWallets, setUser]);
+  }, [
+    sessionQuery.data,
+    setGuest,
+    setSearchHistory,
+    setTrackedWallets,
+    setTrackedFolders,
+    setWalletAliases,
+    setUser,
+  ]);
 
   return (
     <div className="flex h-screen flex-col overflow-hidden">

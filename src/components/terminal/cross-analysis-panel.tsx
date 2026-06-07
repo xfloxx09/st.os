@@ -47,7 +47,10 @@ export function CrossAnalysisPanel({
     try {
       const profile = await fetchWalletAnalyze(row.address, contract, percent);
       setWalletProfile(walletProfileKey(row.address, contract), profile);
-      openWalletPanel(row.address, contract, 0);
+      openWalletPanel(row.address, contract, {
+        percent,
+        label: row.label,
+      });
       useAppStore.getState().setLastQueryMs(elapsedMs(start));
     } catch (err) {
       setAnalyzeError(err instanceof Error ? err.message : "Analyze failed");

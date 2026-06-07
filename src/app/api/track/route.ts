@@ -25,9 +25,73 @@ export async function GET() {
       label: row.label,
       sourceContract: row.source_contract,
       notes: row.notes,
+      folderId: row.folder_id ?? null,
       createdAt: row.created_at.toISOString(),
       lastCheckedAt: row.last_checked_at?.toISOString() ?? null,
     })),
+  });
+}
+
+export async function PATCH(request: NextRequest) {
+  const session = await getAuthSession();
+  if (!session || session.type !== "user") {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const body = (await request.json()) as {
+    walletAddress?: string;
+    label?: string;
+    folderId?: number | null;
+    notes?: string;
+  };
+
+  const wallet = body.walletAddress?.trim();
+  if (!wallet || !isValidEthAddress(wallet)) {
+    return NextResponse.json({ error: "Invalid wallet address" }, { status: 400 });
+  }
+
+  const normalized = normalizeAddress(wallet);
+  const db = getDb();
+
+  const updates: {
+    label?: string | null;
+    folder_id?: number | null;
+    notes?: string | null;
+  } = {};
+
+  if (body.label !== undefined) {
+    updates.label = body.label?.slice(0, 100) ?? null;
+  }
+  if (body.folderId !== undefined) {
+    updates.folder_id = body.folderId;
+  }
+  if (body.notes !== undefined) {
+    updates.notes = body.notes?.slice(0, 500) ?? null;
+  }
+
+  const row = await db
+    .updateTable("tracked_wallets")
+    .set(updates)
+    .where("user_id", "=", session.userId)
+    .where("wallet_address", "=", normalized)
+    .returningAll()
+    .executeTakeFirst();
+
+  if (!row) {
+    return NextResponse.json({ error: "Wallet not tracked" }, { status: 404 });
+  }
+
+  return NextResponse.json({
+    wallet: {
+      id: row.id,
+      walletAddress: row.wallet_address,
+      label: row.label,
+      sourceContract: row.source_contract,
+      notes: row.notes,
+      folderId: row.folder_id ?? null,
+      createdAt: row.created_at.toISOString(),
+      lastCheckedAt: row.last_checked_at?.toISOString() ?? null,
+    },
   });
 }
 
@@ -74,9 +138,9 @@ export async function POST(request: NextRequest) {
     })
     .onConflict((oc) =>
       oc.columns(["user_id", "wallet_address"]).doUpdateSet({
-        label: body.label?.slice(0, 100) ?? null,
         source_contract: sourceContract ? normalizeAddress(sourceContract) : null,
         notes: body.notes?.slice(0, 500) ?? null,
+        ...(body.label ? { label: body.label.slice(0, 100) } : {}),
       })
     )
     .returningAll()
@@ -89,6 +153,7 @@ export async function POST(request: NextRequest) {
       label: row.label,
       sourceContract: row.source_contract,
       notes: row.notes,
+      folderId: row.folder_id ?? null,
       createdAt: row.created_at.toISOString(),
       lastCheckedAt: row.last_checked_at?.toISOString() ?? null,
     },
