@@ -9,6 +9,14 @@ const PLAN_DAYS: Record<PlanInterval, number> = {
 
 export async function hasActiveSubscription(userId: number): Promise<boolean> {
   const db = getDb();
+  const user = await db
+    .selectFrom("users")
+    .select(["role"])
+    .where("id", "=", userId)
+    .executeTakeFirst();
+
+  if (user?.role === "admin") return true;
+
   const row = await db
     .selectFrom("subscriptions")
     .select("id")
@@ -53,6 +61,30 @@ export async function grantSubscription(
     .execute();
 
   return expiresAt;
+}
+
+export async function grantAdminAccess(userId: number): Promise<void> {
+  const db = getDb();
+  const startsAt = new Date();
+  const expiresAt = new Date("2099-12-31T23:59:59Z");
+
+  await db
+    .insertInto("subscriptions")
+    .values({
+      user_id: userId,
+      plan: "yearly",
+      payment_method: "admin",
+      status: "active",
+      starts_at: startsAt,
+      expires_at: expiresAt,
+    })
+    .execute();
+
+  await db
+    .updateTable("users")
+    .set({ role: "admin", plan: "pro" })
+    .where("id", "=", userId)
+    .execute();
 }
 
 export async function isAdmin(userId: number): Promise<boolean> {

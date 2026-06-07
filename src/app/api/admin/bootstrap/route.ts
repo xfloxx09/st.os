@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { grantAdminAccess } from "@/lib/billing/subscription";
 import { getDb } from "@/lib/db";
 
 export async function GET(request: NextRequest) {
@@ -33,16 +34,13 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  await db
-    .updateTable("users")
-    .set({ role: "admin", plan: "pro" })
-    .where("id", "=", user.id)
-    .execute();
+  await grantAdminAccess(user.id);
 
   return NextResponse.json({
     ok: true,
-    message: "Admin granted",
+    message: "Admin + Pro granted",
     userId: user.id,
     adminUrl: "/admin",
+    isPro: true,
   });
 }
