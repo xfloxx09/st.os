@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState, type PointerEvent, type ReactNode } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import type { Panel } from "@/stores/app-store";
 import { useAppStore } from "@/stores/app-store";
 
@@ -11,6 +11,15 @@ interface OsWindowProps {
   tabs: Panel[];
   activeTabId: string;
   children: ReactNode;
+}
+
+function findMergeZoneAt(x: number, y: number): string | null {
+  const elements = document.elementsFromPoint(x, y);
+  for (const el of elements) {
+    const zone = (el as HTMLElement).dataset?.mergeZone;
+    if (zone) return zone;
+  }
+  return null;
 }
 
 export function OsWindow({
@@ -32,6 +41,10 @@ export function OsWindow({
   const detachPanel = useAppStore((s) => s.detachPanel);
   const closePanel = useAppStore((s) => s.closePanel);
   const panels = useAppStore((s) => s.panels);
+  const draggingGroupId = useAppStore((s) => s.draggingGroupId);
+  const mergeHoverGroupId = useAppStore((s) => s.mergeHoverGroupId);
+  const setDraggingGroupId = useAppStore((s) => s.setDraggingGroupId);
+  const setMergeHoverGroupId = useAppStore((s) => s.setMergeHoverGroupId);
 
   const dragRef = useRef<{
     startX: number;
@@ -40,7 +53,6 @@ export function OsWindow({
     originY: number;
   } | null>(null);
   const [dragging, setDragging] = useState(false);
-  const [mergeTarget, setMergeTarget] = useState(false);
   const [resizing, setResizing] = useState(false);
   const resizeRef = useRef<{
     startX: number;
@@ -51,6 +63,12 @@ export function OsWindow({
 
   const { x, y, width, height, zIndex, minimized, maximized, title } = host;
   const activeTab = tabs.find((t) => t.id === activeTabId) ?? tabs[0];
+  const isMergeTarget =
+    mergeHoverGroupId === groupId &&
+    draggingGroupId !== null &&
+    draggingGroupId !== groupId;
+  const anotherWindowDragging =
+    draggingGroupId !== null && draggingGroupId !== groupId;
 
   const onPointerDown = (e: PointerEvent<HTMLDivElement>) => {
     if ((e.target as HTMLElement).closest("button")) return;
@@ -62,6 +80,7 @@ export function OsWindow({
       originY: y,
     };
     setDragging(true);
+    setDraggingGroupId(groupId);
     e.currentTarget.setPointerCapture(e.pointerId);
   };
 
@@ -80,24 +99,28 @@ export function OsWindow({
     const dx = e.clientX - dragRef.current.startX;
     const dy = e.clientY - dragRef.current.startY;
     moveGroup(groupId, dragRef.current.originX + dx, dragRef.current.originY + dy);
+
+    const hoverZone = findMergeZoneAt(e.clientX, e.clientY);
+    if (hoverZone && hoverZone !== groupId) {
+      setMergeHoverGroupId(hoverZone);
+    } else {
+      setMergeHoverGroupId(null);
+    }
   };
 
   const onPointerUp = (e: PointerEvent<HTMLDivElement>) => {
-    if (dragRef.current && dragging) {
-      const elements = document.elementsFromPoint(e.clientX, e.clientY);
-      for (const el of elements) {
-        const targetGroup = (el as HTMLElement).dataset?.windowGroup;
-        if (targetGroup && targetGroup !== groupId && activeTab) {
-          mergePanels(activeTab.id, targetGroup);
-          break;
-        }
+    if (dragRef.current && dragging && activeTab) {
+      const targetGroup = findMergeZoneAt(e.clientX, e.clientY);
+      if (targetGroup && targetGroup !== groupId) {
+        mergePanels(activeTab.id, targetGroup);
       }
     }
     dragRef.current = null;
     resizeRef.current = null;
     setDragging(false);
     setResizing(false);
-    setMergeTarget(false);
+    setDraggingGroupId(null);
+    setMergeHoverGroupId(null);
     e.currentTarget.releasePointerCapture(e.pointerId);
   };
 
@@ -134,22 +157,22 @@ export function OsWindow({
 
   return (
     <motion.div
-      className={`absolute flex flex-col border bg-[var(--bg-panel)] shadow-none ${
-        mergeTarget ? "border-[var(--accent)]" : "border-[var(--border)]"
-      }`}
+      className="absolute flex flex-col border border-[var(--border)] bg-[var(--bg-panel)] shadow-none"
       style={{ ...layoutStyle, zIndex }}
-      data-window-group={groupId}
       initial={{ opacity: 0, scale: 0.98 }}
       animate={{ opacity: 1, scale: 1 }}
       transition={{ duration: 0.15 }}
       onMouseDown={() => focusGroup(groupId)}
-      onMouseEnter={() => setMergeTarget(dragging)}
     >
       <div
-        className={`flex h-7 cursor-grab items-center justify-between border-b border-[var(--border)] px-2 text-[10px] ${
+        className={`flex h-7 cursor-grab items-center justify-between border-b px-2 text-[10px] ${
           dragging ? "cursor-grabbing" : ""
+        } ${
+          tabs.length === 1 && isMergeTarget
+            ? "border-[var(--accent)] bg-[var(--accent)]/15"
+            : "border-[var(--border)]"
         }`}
-        data-window-group={groupId}
+        data-merge-zone={tabs.length === 1 ? groupId : undefined}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
@@ -200,22 +223,86 @@ export function OsWindow({
       </div>
 
       {tabs.length > 1 ? (
-        <div className="flex gap-0 border-b border-[var(--border)] overflow-x-auto">
+        <motion.div
+          className={`relative flex gap-0 border-b overflow-x-auto transition-colors ${
+            isMergeTarget
+              ? "border-[var(--accent)] bg-[var(--accent)]/15"
+              : "border-[var(--border)]"
+          }`}
+          data-merge-zone={groupId}
+          animate={
+            isMergeTarget
+              ? {
+                  boxShadow: [
+                    "0 0 0 0 rgba(0,255,204,0)",
+                    "0 0 12px 2px rgba(0,255,204,0.45)",
+                    "0 0 0 0 rgba(0,255,204,0)",
+                  ],
+                }
+              : { boxShadow: "0 0 0 0 rgba(0,255,204,0)" }
+          }
+          transition={
+            isMergeTarget
+              ? { duration: 0.8, repeat: Infinity, ease: "easeInOut" }
+              : { duration: 0.15 }
+          }
+        >
           {tabs.map((tab) => (
-            <button
+            <div
               key={tab.id}
-              type="button"
-              onClick={() => setActiveTab(groupId, tab.id)}
-              className={`shrink-0 px-3 py-1 text-[10px] ${
-                tab.id === activeTabId
-                  ? "bg-[var(--bg)] text-[var(--accent)]"
-                  : "text-[var(--text-secondary)] hover:bg-[var(--bg)]"
+              className={`flex shrink-0 items-center border-r border-[var(--border)]/50 ${
+                tab.id === activeTabId ? "bg-[var(--bg)]" : ""
               }`}
             >
-              {tab.title}
-            </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab(groupId, tab.id)}
+                className={`max-w-[140px] truncate px-2 py-1 text-[10px] ${
+                  tab.id === activeTabId
+                    ? "text-[var(--accent)]"
+                    : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                }`}
+              >
+                {tab.title}
+              </button>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  closePanel(tab.id);
+                }}
+                className="px-1.5 py-1 text-[9px] leading-none text-[var(--text-secondary)] hover:bg-[var(--danger)]/20 hover:text-[var(--danger)]"
+                aria-label={`Close ${tab.title}`}
+                title="Close tab"
+              >
+                ×
+              </button>
+            </div>
           ))}
-        </div>
+          <AnimatePresence>
+            {isMergeTarget ? (
+              <motion.span
+                initial={{ opacity: 0, x: -4 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0 }}
+                className="ml-auto shrink-0 px-2 py-1 text-[9px] tracking-widest text-[var(--accent)]"
+              >
+                DROP TO MERGE
+              </motion.span>
+            ) : null}
+          </AnimatePresence>
+        </motion.div>
+      ) : null}
+
+      {tabs.length === 1 && isMergeTarget ? (
+        <motion.div
+          className="border-b border-[var(--accent)] bg-[var(--accent)]/10 px-2 py-0.5 text-center text-[9px] tracking-widest text-[var(--accent)]"
+          initial={{ opacity: 0, height: 0 }}
+          animate={{ opacity: 1, height: "auto" }}
+          exit={{ opacity: 0 }}
+        >
+          DROP ON TITLE BAR TO MERGE
+        </motion.div>
       ) : null}
 
       <div className="os-scrollbar relative flex-1 overflow-auto p-3 text-xs">
@@ -233,8 +320,15 @@ export function OsWindow({
 
       {dragging && panels.length > 1 ? (
         <p className="pointer-events-none absolute -bottom-5 left-0 text-[9px] text-[var(--text-secondary)]">
-          Drop on another window to merge tabs
+          Drop on another window&apos;s tab bar to merge
         </p>
+      ) : null}
+
+      {anotherWindowDragging && !isMergeTarget && tabs.length > 1 ? (
+        <div
+          className="pointer-events-none absolute inset-x-0 top-7 h-6 border-b border-dashed border-[var(--border)]/40"
+          aria-hidden
+        />
       ) : null}
     </motion.div>
   );

@@ -213,6 +213,10 @@ interface AppState {
 
   telegramBotUsername: string | null;
 
+  draggingGroupId: string | null;
+
+  mergeHoverGroupId: string | null;
+
   isAuthenticated: () => boolean;
 
   setBootComplete: (value: boolean) => void;
@@ -247,6 +251,10 @@ interface AppState {
   setAnalyzeError: (error: string | null) => void;
 
   setTelegramBotUsername: (username: string | null) => void;
+
+  setDraggingGroupId: (groupId: string | null) => void;
+
+  setMergeHoverGroupId: (groupId: string | null) => void;
 
   setAnalysis: (contractAddress: string, data: CaAnalysisResult) => void;
 
@@ -464,6 +472,10 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   telegramBotUsername: null,
 
+  draggingGroupId: null,
+
+  mergeHoverGroupId: null,
+
   isAuthenticated: () => Boolean(get().user || get().guest),
 
   setBootComplete: (value) => set({ bootComplete: value }),
@@ -512,6 +524,10 @@ export const useAppStore = create<AppState>((set, get) => ({
   setAnalyzeError: (error) => set({ analyzeError: error }),
 
   setTelegramBotUsername: (username) => set({ telegramBotUsername: username }),
+
+  setDraggingGroupId: (groupId) => set({ draggingGroupId: groupId }),
+
+  setMergeHoverGroupId: (groupId) => set({ mergeHoverGroupId: groupId }),
 
   setAnalysis: (contractAddress, data) =>
 
