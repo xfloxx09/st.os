@@ -1,8 +1,10 @@
 import { create } from "zustand";
 
 import type {
+  BulkExposeResult,
   CaAnalysisResult,
   CrossAnalysisResult,
+  ExposeScanResult,
   FundTraceResult,
   WalletNetworkResult,
   WalletProfile,
@@ -25,7 +27,9 @@ export type PanelType =
 
   | "CROSS_ANALYSIS"
 
-  | "FUND_TRACER";
+  | "FUND_TRACER"
+
+  | "EXPOSE_REPORT";
 
 
 
@@ -175,6 +179,10 @@ interface AppState {
 
   fundTraceResults: Record<string, FundTraceResult>;
 
+  exposeScanResults: Record<string, ExposeScanResult>;
+
+  bulkExposeResults: Record<string, BulkExposeResult>;
+
   crossCompareSelection: string[];
 
   lastQueryMs: number | null;
@@ -216,6 +224,10 @@ interface AppState {
   setCrossAnalysis: (key: string, result: CrossAnalysisResult) => void;
 
   setFundTrace: (contractAddress: string, result: FundTraceResult) => void;
+
+  setExposeScan: (contractAddress: string, result: ExposeScanResult) => void;
+
+  setBulkExpose: (contractAddress: string, result: BulkExposeResult) => void;
 
   toggleCrossCompare: (contractAddress: string) => void;
 
@@ -284,6 +296,8 @@ interface AppState {
   openCrossAnalysisPanel: (contracts: string[]) => void;
 
   openFundTracerPanel: (contractAddress: string) => void;
+
+  openExposeReportPanel: (contractAddress: string) => void;
 
 }
 
@@ -399,6 +413,10 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   fundTraceResults: {},
 
+  exposeScanResults: {},
+
+  bulkExposeResults: {},
+
   crossCompareSelection: [],
 
   lastQueryMs: null,
@@ -474,6 +492,22 @@ export const useAppStore = create<AppState>((set, get) => ({
     set((s) => ({
 
       fundTraceResults: { ...s.fundTraceResults, [contractAddress]: result },
+
+    })),
+
+  setExposeScan: (contractAddress, result) =>
+
+    set((s) => ({
+
+      exposeScanResults: { ...s.exposeScanResults, [contractAddress]: result },
+
+    })),
+
+  setBulkExpose: (contractAddress, result) =>
+
+    set((s) => ({
+
+      bulkExposeResults: { ...s.bulkExposeResults, [contractAddress]: result },
 
     })),
 
@@ -897,15 +931,15 @@ export const useAppStore = create<AppState>((set, get) => ({
 
           type: "HOLDER_ROSTER",
 
-          title: "HOLDER_ROSTER.EXE",
+          title: "WALLET_INTEL.EXE",
 
           x: 540,
 
           y: 80,
 
-          width: 520,
+          width: 580,
 
-          height: 420,
+          height: 480,
 
           contractAddress,
 
@@ -1234,6 +1268,70 @@ export const useAppStore = create<AppState>((set, get) => ({
           width: 520,
 
           height: 480,
+
+          contractAddress,
+
+        },
+
+        s.nextZIndex
+
+      );
+
+      const exists = s.panels.some((p) => p.id === id);
+
+      if (exists) {
+
+        return {
+
+          panels: s.panels.map((p) =>
+
+            p.id === id ? { ...p, minimized: false, zIndex: s.nextZIndex } : p
+
+          ),
+
+          activeTabByGroup: { ...s.activeTabByGroup, [id]: id },
+
+          nextZIndex: s.nextZIndex + 1,
+
+        };
+
+      }
+
+      return {
+
+        panels: [...s.panels, panel],
+
+        activeTabByGroup: { ...s.activeTabByGroup, [id]: id },
+
+        nextZIndex: s.nextZIndex + 1,
+
+      };
+
+    }),
+
+  openExposeReportPanel: (contractAddress) =>
+
+    set((s) => {
+
+      const id = `expose-report-${contractAddress}`;
+
+      const panel = withPanelDefaults(
+
+        {
+
+          id,
+
+          type: "EXPOSE_REPORT",
+
+          title: "EXPOSE_REPORT.EXE",
+
+          x: 120,
+
+          y: 60,
+
+          width: 640,
+
+          height: 520,
 
           contractAddress,
 

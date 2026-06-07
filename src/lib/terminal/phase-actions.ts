@@ -1,6 +1,8 @@
 import type { NetworkWindow } from "@/lib/analyze/wallet-network";
 import type {
+  BulkExposeResult,
   CrossAnalysisResult,
+  ExposeScanResult,
   FundTraceResult,
   WalletNetworkResult,
   WalletProfile,
@@ -61,6 +63,33 @@ export async function fetchWalletNetwork(
   const data = await res.json();
   if (!res.ok) throw new Error(data.error ?? "Network analysis failed");
   return data as WalletNetworkResult;
+}
+
+export async function fetchExposeScan(
+  contractAddress: string,
+  options?: { full?: boolean; refresh?: boolean }
+): Promise<ExposeScanResult & { proRequired?: boolean }> {
+  const params = new URLSearchParams({ contract: contractAddress });
+  if (options?.full === false) params.set("full", "0");
+  if (options?.refresh) params.set("refresh", "1");
+  const res = await fetch(`/api/analyze/expose-scan?${params}`);
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error ?? "Expose scan failed");
+  return data as ExposeScanResult & { proRequired?: boolean };
+}
+
+export async function fetchBulkExpose(
+  contractAddress: string,
+  windowDays: NetworkWindow = 90
+): Promise<BulkExposeResult> {
+  const params = new URLSearchParams({
+    contract: contractAddress,
+    window: String(windowDays),
+  });
+  const res = await fetch(`/api/analyze/expose?${params}`);
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error ?? "Bulk expose failed");
+  return data as BulkExposeResult;
 }
 
 export async function fetchTrackRefresh(

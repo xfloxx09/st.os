@@ -64,6 +64,95 @@ export async function fetchEthBalance(walletAddress: string): Promise<number | n
   }) as Promise<number | null>;
 }
 
+export interface AssetTransfer {
+  from: string;
+  to: string;
+  value: number | null;
+  blockNum: string;
+  hash: string;
+  metadata: { blockTimestamp: string | null };
+}
+
+export async function fetchTokenTransfers(
+  contractAddress: string,
+  maxCount = 500
+): Promise<AssetTransfer[]> {
+  if (!BASE_URL) return [];
+
+  const transfers: AssetTransfer[] = [];
+  let pageKey: string | undefined;
+
+  for (let page = 0; page < 3 && transfers.length < maxCount; page++) {
+    const batch = (await alchemyQueue.add(async () => {
+      const params: Record<string, unknown> = {
+        fromBlock: "0x0",
+        toBlock: "latest",
+        contractAddresses: [contractAddress],
+        category: ["erc20"],
+        withMetadata: true,
+        maxCount: String(Math.min(200, maxCount - transfers.length)),
+        order: "desc",
+      };
+      if (pageKey) params.pageKey = pageKey;
+
+      const res = await fetch(BASE_URL!, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          jsonrpc: "2.0",
+          id: 1,
+          method: "alchemy_getAssetTransfers",
+          params: [params],
+        }),
+      });
+
+      if (!res.ok) return null;
+      const json = (await res.json()) as {
+        result?: {
+          transfers?: Array<{
+            from: string;
+            to: string;
+            value: number | null;
+            blockNum: string;
+            hash: string;
+            metadata?: { blockTimestamp?: string };
+          }>;
+          pageKey?: string;
+        };
+      };
+      return json.result ?? null;
+    })) as {
+      transfers?: Array<{
+        from: string;
+        to: string;
+        value: number | null;
+        blockNum: string;
+        hash: string;
+        metadata?: { blockTimestamp?: string };
+      }>;
+      pageKey?: string;
+    } | null;
+
+    if (!batch?.transfers?.length) break;
+
+    for (const tx of batch.transfers) {
+      transfers.push({
+        from: tx.from,
+        to: tx.to,
+        value: tx.value,
+        blockNum: tx.blockNum,
+        hash: tx.hash,
+        metadata: { blockTimestamp: tx.metadata?.blockTimestamp ?? null },
+      });
+    }
+
+    pageKey = batch.pageKey;
+    if (!pageKey) break;
+  }
+
+  return transfers.slice(0, maxCount);
+}
+
 export async function fetchTokenMetadata(
   contractAddress: string
 ): Promise<TokenMetadata | null> {

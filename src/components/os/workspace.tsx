@@ -26,6 +26,8 @@ import { FundTracerPanel } from "@/components/terminal/fund-tracer-panel";
 
 import { WalletNetworkPanel } from "@/components/terminal/wallet-network-panel";
 
+import { ExposeReportPanel } from "@/components/terminal/expose-report-panel";
+
 import {
 
   crossAnalysisKey,
@@ -65,6 +67,8 @@ export function Workspace() {
   const fundTraceResults = useAppStore((s) => s.fundTraceResults);
 
   const networkResults = useAppStore((s) => s.networkResults);
+
+  const bulkExposeResults = useAppStore((s) => s.bulkExposeResults);
 
   const analyzeError = useAppStore((s) => s.analyzeError);
 
@@ -270,6 +274,12 @@ export function Workspace() {
 
             const networkResult = networkKey ? networkResults[networkKey] : null;
 
+            const bulkExpose = activePanel.contractAddress
+
+              ? bulkExposeResults[activePanel.contractAddress]
+
+              : null;
+
 
 
             return (
@@ -385,6 +395,18 @@ export function Workspace() {
                   <p className="scan-line text-[var(--text-secondary)]">
 
                     MAPPING WALLET SYNDICATE... TRACING CO-BUYS...
+
+                  </p>
+
+                ) : activePanel.type === "EXPOSE_REPORT" && bulkExpose ? (
+
+                  <ExposeReportPanel result={bulkExpose} />
+
+                ) : activePanel.type === "EXPOSE_REPORT" ? (
+
+                  <p className="scan-line text-[var(--text-secondary)]">
+
+                    RUNNING BULK EXPOSE... MAPPING FISHY WALLETS...
 
                   </p>
 

@@ -253,3 +253,62 @@ export interface WalletNetworkResult {
   fetchedAt: string;
   cached: boolean;
 }
+
+export interface TraderEntry {
+  rank: number;
+  address: string;
+  label: string | null;
+  buyCount: number;
+  sellCount: number;
+  transferInCount: number;
+  transferOutCount: number;
+  totalVolume: number;
+  netVolume: number;
+  tradeCount: number;
+  firstTradeAt: string | null;
+  lastTradeAt: string | null;
+}
+
+export interface FishyWallet {
+  address: string;
+  label: string | null;
+  holderRank: number | null;
+  percentOfSupply: number | null;
+  fishyScore: number;
+  tier: "CRITICAL" | "HIGH" | "MEDIUM" | "LOW";
+  reasons: string[];
+  flags: string[];
+  sharedFundWith: string[];
+}
+
+export interface ExposeScanResult {
+  contractAddress: string;
+  tokenSymbol: string | null;
+  fishyWallets: FishyWallet[];
+  traders: TraderEntry[];
+  sharedSources: SharedFundSource[];
+  insiderClusterScore: number;
+  scanDepth: "basic" | "full";
+  summary: string;
+  fetchedAt: string;
+  cached: boolean;
+}
+
+export interface BulkExposeEntry {
+  walletAddress: string;
+  label: string | null;
+  fishyScore: number;
+  network: WalletNetworkResult | null;
+  error?: string;
+}
+
+export interface BulkExposeResult {
+  contractAddress: string;
+  windowDays: number;
+  entries: BulkExposeEntry[];
+  primaryNetwork: WalletNetworkResult | null;
+  combinedSuspicion: number;
+  summary: string;
+  fetchedAt: string;
+  cached: boolean;
+}
