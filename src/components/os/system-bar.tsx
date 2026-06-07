@@ -37,11 +37,20 @@ export function SystemBar() {
       </div>
 
       <div className="flex items-center gap-6 text-[var(--text-secondary)]">
-        <span>GAS: -- gwei</span>
         <span>
           PROC:{" "}
           <span className="text-[var(--text-primary)]">{activeProcesses}</span>
         </span>
+        {user?.isAdmin ? (
+          <span className="text-[var(--warning)]">ADMIN</span>
+        ) : null}
+        {user?.isPro ? (
+          <span className="text-[var(--accent)]">PRO</span>
+        ) : user ? (
+          <Link href="/pricing" className="text-[var(--text-secondary)] hover:text-[var(--accent)]">
+            FREE
+          </Link>
+        ) : null}
         <span className="text-[var(--text-primary)]">{displayName}</span>
         {!user && !guest && botUsername ? (
           <TelegramLogin botUsername={botUsername} />

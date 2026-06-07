@@ -130,3 +130,26 @@ export async function fetchContractSource(
   });
   return result[0] ?? null;
 }
+
+export async function fetchGasPrice(): Promise<{
+  gwei: number;
+  baseFeeGwei: number | null;
+}> {
+  try {
+    const result = await etherscanFetch<{
+      ProposeGasPrice: string;
+      suggestBaseFee?: string;
+    }>({
+      module: "gastracker",
+      action: "gasoracle",
+    });
+    return {
+      gwei: Number(result.ProposeGasPrice) || 0,
+      baseFeeGwei: result.suggestBaseFee
+        ? Number(result.suggestBaseFee)
+        : null,
+    };
+  } catch {
+    return { gwei: 0, baseFeeGwei: null };
+  }
+}

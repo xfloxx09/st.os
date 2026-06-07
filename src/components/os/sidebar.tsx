@@ -38,6 +38,8 @@ export function Sidebar() {
 
   const trackedWallets = useAppStore((s) => s.trackedWallets);
 
+  const setTrackedWallets = useAppStore((s) => s.setTrackedWallets);
+
   const setSearchHistory = useAppStore((s) => s.setSearchHistory);
 
   const setAnalysis = useAppStore((s) => s.setAnalysis);
@@ -63,6 +65,8 @@ export function Sidebar() {
   const setCrossAnalysis = useAppStore((s) => s.setCrossAnalysis);
 
   const openCrossAnalysisPanel = useAppStore((s) => s.openCrossAnalysisPanel);
+
+  const closePanel = useAppStore((s) => s.closePanel);
 
   const user = useAppStore((s) => s.user);
 
@@ -235,6 +239,48 @@ export function Sidebar() {
       setRunningCross(false);
 
       setActiveProcesses(Math.max(0, useAppStore.getState().activeProcesses - 1));
+
+    }
+
+  };
+
+
+
+  const untrackWallet = async (walletAddress: string) => {
+
+    try {
+
+      const res = await fetch(
+
+        `/api/track?wallet=${encodeURIComponent(walletAddress)}`,
+
+        { method: "DELETE" }
+
+      );
+
+      if (!res.ok) {
+
+        const data = await res.json();
+
+        throw new Error(data.error ?? "Failed to untrack");
+
+      }
+
+      setTrackedWallets(
+
+        trackedWallets.filter(
+
+          (w) => w.walletAddress.toLowerCase() !== walletAddress.toLowerCase()
+
+        )
+
+      );
+
+      closePanel(`track-${walletAddress}`);
+
+    } catch (err) {
+
+      setAnalyzeError(err instanceof Error ? err.message : "Untrack failed");
 
     }
 
@@ -450,7 +496,7 @@ export function Sidebar() {
 
             {trackedWallets.map((item) => (
 
-              <li key={item.id}>
+              <li key={item.id} className="flex items-stretch gap-1">
 
                 <button
 
@@ -460,7 +506,7 @@ export function Sidebar() {
 
                   disabled={loadingWallet === item.walletAddress}
 
-                  className="flex w-full flex-col border border-transparent px-2 py-1.5 text-left text-[11px] hover:border-[var(--border)] hover:bg-[var(--bg)] disabled:opacity-50"
+                  className="flex min-w-0 flex-1 flex-col border border-transparent px-2 py-1.5 text-left text-[11px] hover:border-[var(--border)] hover:bg-[var(--bg)] disabled:opacity-50"
 
                 >
 
@@ -483,6 +529,22 @@ export function Sidebar() {
                     </span>
 
                   ) : null}
+
+                </button>
+
+                <button
+
+                  type="button"
+
+                  onClick={() => void untrackWallet(item.walletAddress)}
+
+                  className="shrink-0 border border-transparent px-1.5 text-[10px] text-[var(--text-secondary)] hover:border-[var(--danger)] hover:text-[var(--danger)]"
+
+                  title="Untrack wallet"
+
+                >
+
+                  ×
 
                 </button>
 

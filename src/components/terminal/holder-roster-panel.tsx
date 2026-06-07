@@ -70,6 +70,8 @@ export function HolderRosterPanel({
 
   const [tracingFunds, setTracingFunds] = useState(false);
 
+  const [showFiltered, setShowFiltered] = useState(false);
+
   const guest = useAppStore((s) => s.guest);
 
   const user = useAppStore((s) => s.user);
@@ -95,6 +97,8 @@ export function HolderRosterPanel({
 
 
   const excludedCount = allHolders.length - holders.length;
+
+  const filteredHolders = allHolders.filter((h) => h.excluded);
 
   const canAct = Boolean(user);
 
@@ -593,6 +597,40 @@ export function HolderRosterPanel({
         </table>
 
       </div>
+
+      {filteredHolders.length > 0 ? (
+        <div className="border-t border-[var(--border)] pt-2">
+          <button
+            type="button"
+            onClick={() => setShowFiltered((v) => !v)}
+            className="text-[10px] text-[var(--text-secondary)] hover:text-[var(--accent)]"
+          >
+            {showFiltered ? "▼" : "▶"} FILTERED ({filteredHolders.length}) — CEX/DEX/bridges/burn
+          </button>
+          {showFiltered ? (
+            <div className="mt-2 max-h-32 overflow-auto os-scrollbar">
+              <table className="w-full text-left text-[10px]">
+                <tbody>
+                  {filteredHolders.map((holder) => (
+                    <tr
+                      key={holder.address}
+                      className="border-b border-[var(--border)]/30 text-[var(--text-secondary)]"
+                    >
+                      <td className="py-1 pr-2">{holder.rank}</td>
+                      <td className="py-1 pr-2">
+                        {holder.label ?? truncateAddress(holder.address)}
+                      </td>
+                      <td className="py-1 text-right">
+                        {holder.percentOfSupply.toFixed(2)}%
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
 
     </div>
 

@@ -19,6 +19,7 @@ Contract Address intelligence terminal for Ethereum tokens. Paste a CA, analyze 
 | **1** | CA analyze, token overview, holder roster, search history | ✅ |
 | **2** | Wallet analyze, fund origin, trades, PNL, portfolio, live tracking | ✅ |
 | **3** | Cross-holder engine, shared fund tracer, insider scoring | ✅ |
+| **4** | Live gas, auto-refresh tracks, filtered holders, deployer analyze, untrack | ✅ |
 
 ### Phase 3 features
 

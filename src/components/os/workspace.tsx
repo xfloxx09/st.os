@@ -296,7 +296,10 @@ export function Workspace() {
 
                 ) : activePanel.type === "WALLET_TRACK" && walletTrack ? (
 
-                  <WalletTrackerPanel snapshot={walletTrack} />
+                  <WalletTrackerPanel
+                    snapshot={walletTrack}
+                    contractAddress={activePanel.contractAddress}
+                  />
 
                 ) : activePanel.type === "WALLET_TRACK" ? (
 
@@ -308,7 +311,10 @@ export function Workspace() {
 
                 ) : activePanel.type === "CROSS_ANALYSIS" && crossResult ? (
 
-                  <CrossAnalysisPanel result={crossResult} />
+                  <CrossAnalysisPanel
+                    result={crossResult}
+                    primaryContract={activePanel.compareContracts?.[0]}
+                  />
 
                 ) : activePanel.type === "CROSS_ANALYSIS" ? (
 

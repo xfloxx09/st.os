@@ -1,7 +1,11 @@
 "use client";
 
+import { useState } from "react";
 import type { WalletTrackSnapshot } from "@/lib/analyze/types";
 import { formatUsd, truncateAddress } from "@/lib/ethereum";
+import { fetchTrackRefresh } from "@/lib/terminal/phase-actions";
+import { elapsedMs, startTimer } from "@/lib/timing";
+import { useAppStore, walletTrackKey } from "@/stores/app-store";
 
 const TIER_COLOR: Record<WalletTrackSnapshot["rating"]["tier"], string> = {
   ALPHA: "var(--success)",
@@ -11,8 +15,35 @@ const TIER_COLOR: Record<WalletTrackSnapshot["rating"]["tier"], string> = {
   TOXIC: "var(--danger)",
 };
 
-export function WalletTrackerPanel({ snapshot }: { snapshot: WalletTrackSnapshot }) {
+export function WalletTrackerPanel({
+  snapshot,
+  contractAddress,
+}: {
+  snapshot: WalletTrackSnapshot;
+  contractAddress?: string;
+}) {
+  const [refreshing, setRefreshing] = useState(false);
+  const setWalletTrack = useAppStore((s) => s.setWalletTrack);
+  const setAnalyzeError = useAppStore((s) => s.setAnalyzeError);
   const tierColor = TIER_COLOR[snapshot.rating.tier];
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    setAnalyzeError(null);
+    const start = startTimer();
+    try {
+      const next = await fetchTrackRefresh(
+        snapshot.walletAddress,
+        contractAddress ?? snapshot.contractAddress
+      );
+      setWalletTrack(walletTrackKey(snapshot.walletAddress), next);
+      useAppStore.getState().setLastQueryMs(elapsedMs(start));
+    } catch (err) {
+      setAnalyzeError(err instanceof Error ? err.message : "Refresh failed");
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   return (
     <div className="space-y-4 text-[11px]">
@@ -23,9 +54,19 @@ export function WalletTrackerPanel({ snapshot }: { snapshot: WalletTrackSnapshot
           </div>
           <div className="text-[10px] text-[var(--text-secondary)]">
             LIVE TRACK · {snapshot.ethBalance != null ? `${snapshot.ethBalance.toFixed(3)} ETH` : "ETH n/a"}
+            {" · "}
+            {new Date(snapshot.fetchedAt).toLocaleTimeString()}
           </div>
         </div>
         <div className="text-right">
+          <button
+            type="button"
+            onClick={() => void onRefresh()}
+            disabled={refreshing}
+            className="mb-1 border border-[var(--accent)] px-2 py-0.5 text-[9px] text-[var(--accent)] disabled:opacity-40"
+          >
+            {refreshing ? "..." : "REFRESH"}
+          </button>
           <div style={{ color: tierColor }} className="text-lg font-bold">
             {snapshot.rating.score}
           </div>

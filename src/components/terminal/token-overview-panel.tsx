@@ -7,9 +7,9 @@ import {
   formatUsd,
   truncateAddress,
 } from "@/lib/ethereum";
-import { fetchFundTrace } from "@/lib/terminal/phase-actions";
+import { fetchFundTrace, fetchWalletAnalyze } from "@/lib/terminal/phase-actions";
 import { elapsedMs, startTimer } from "@/lib/timing";
-import { useAppStore } from "@/stores/app-store";
+import { useAppStore, walletProfileKey } from "@/stores/app-store";
 
 function flagColor(level: string) {
   if (level === "danger") return "text-[var(--danger)] border-[var(--danger)]";
@@ -27,8 +27,11 @@ export function TokenOverviewPanel({
   contractAddress?: string;
 }) {
   const [tracing, setTracing] = useState(false);
+  const [analyzingDeployer, setAnalyzingDeployer] = useState(false);
   const user = useAppStore((s) => s.user);
   const openFundTracerPanel = useAppStore((s) => s.openFundTracerPanel);
+  const openWalletPanel = useAppStore((s) => s.openWalletPanel);
+  const setWalletProfile = useAppStore((s) => s.setWalletProfile);
   const setFundTrace = useAppStore((s) => s.setFundTrace);
   const toggleCrossCompare = useAppStore((s) => s.toggleCrossCompare);
   const crossCompareSelection = useAppStore((s) => s.crossCompareSelection);
@@ -59,6 +62,28 @@ export function TokenOverviewPanel({
   };
 
   const inCross = crossCompareSelection.map((c) => c.toLowerCase()).includes(ca.toLowerCase());
+
+  const onAnalyzeDeployer = async () => {
+    if (!overview.deployer || !user) {
+      setAnalyzeError("Deployer unknown or login required.");
+      return;
+    }
+    setAnalyzingDeployer(true);
+    setAnalyzeError(null);
+    setActiveProcesses(useAppStore.getState().activeProcesses + 1);
+    const start = startTimer();
+    try {
+      const profile = await fetchWalletAnalyze(overview.deployer, ca);
+      setWalletProfile(walletProfileKey(overview.deployer, ca), profile);
+      openWalletPanel(overview.deployer, ca, 0);
+      useAppStore.getState().setLastQueryMs(elapsedMs(start));
+    } catch (err) {
+      setAnalyzeError(err instanceof Error ? err.message : "Deployer analyze failed");
+    } finally {
+      setAnalyzingDeployer(false);
+      setActiveProcesses(Math.max(0, useAppStore.getState().activeProcesses - 1));
+    }
+  };
 
   return (
     <div className="space-y-4 text-[11px]">
@@ -121,14 +146,26 @@ export function TokenOverviewPanel({
       </div>
 
       <div className="space-y-1 border-t border-[var(--border)] pt-3">
-        <Row
-          label="DEPLOYER"
-          value={
-            overview.deployer
-              ? truncateAddress(overview.deployer)
-              : "UNKNOWN"
-          }
-        />
+        <div className="flex items-center justify-between gap-4">
+          <span className="text-[var(--text-secondary)]">DEPLOYER</span>
+          <div className="flex items-center gap-2">
+            <span className="text-[var(--text-primary)]">
+              {overview.deployer
+                ? truncateAddress(overview.deployer)
+                : "UNKNOWN"}
+            </span>
+            {user && overview.deployer ? (
+              <button
+                type="button"
+                onClick={() => void onAnalyzeDeployer()}
+                disabled={analyzingDeployer}
+                className="border border-[var(--accent)] px-1.5 py-0.5 text-[9px] text-[var(--accent)] disabled:opacity-40"
+              >
+                {analyzingDeployer ? "..." : "ANALYZE"}
+              </button>
+            ) : null}
+          </div>
+        </div>
         <Row
           label="VERIFIED"
           value={overview.verified ? "YES" : "NO"}

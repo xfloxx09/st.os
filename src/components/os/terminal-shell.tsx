@@ -7,6 +7,7 @@ import { SystemBar } from "@/components/os/system-bar";
 import { Sidebar } from "@/components/os/sidebar";
 import { Workspace } from "@/components/os/workspace";
 import { StatusBar } from "@/components/os/status-bar";
+import { useTrackAutoRefresh } from "@/components/os/use-track-auto-refresh";
 import { useAppStore } from "@/stores/app-store";
 
 export function TerminalShell() {
@@ -17,6 +18,8 @@ export function TerminalShell() {
   const setTrackedWallets = useAppStore((s) => s.setTrackedWallets);
   const setTelegramBotUsername = useAppStore((s) => s.setTelegramBotUsername);
   const bootComplete = useAppStore((s) => s.bootComplete);
+
+  useTrackAutoRefresh();
 
   const configQuery = useQuery({
     queryKey: ["config"],
