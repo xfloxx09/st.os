@@ -22,8 +22,8 @@ import { fetchTokenTransactions } from "@/lib/etherscan-wallet";
 import { normalizeAddress } from "@/lib/ethereum";
 import { getAddressLabel, shouldExcludeHolder } from "@/lib/labels";
 
-const SCAN_LIMIT = 18;
-const BATCH = 3;
+const SCAN_LIMIT = 10;
+const BATCH = 2;
 
 function sinceMs(days: number): number {
   return Date.now() - days * 24 * 60 * 60 * 1000;
@@ -150,7 +150,7 @@ export async function scanProAlphaTargets(
     .filter((tx) => tx.timeStamp > 0);
 
   if (transferRows.length < 20) {
-    for (const holder of holders.filter((h) => !h.excluded).slice(0, 20)) {
+    for (const holder of holders.filter((h) => !h.excluded).slice(0, 8)) {
       const txs = await fetchTokenTransactions(
         holder.address,
         normalized,

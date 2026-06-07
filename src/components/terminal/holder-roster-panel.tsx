@@ -130,7 +130,6 @@ export function HolderRosterPanel({
 
   useEffect(() => {
     void runExposeScan();
-    if (isPro) setTab("pro");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [contractAddress]);
 
@@ -446,7 +445,11 @@ export function HolderRosterPanel({
       ) : null}
 
       {tab === "pro" ? (
-        <ProTrackPanel contractAddress={contractAddress} isPro={isPro} />
+        <ProTrackPanel
+          contractAddress={contractAddress}
+          isPro={isPro}
+          active={tab === "pro"}
+        />
       ) : null}
 
       {filteredHolders.length > 0 ? (

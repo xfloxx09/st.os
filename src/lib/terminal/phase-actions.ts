@@ -9,28 +9,23 @@ import type {
   WalletProfile,
   WalletTrackSnapshot,
 } from "@/lib/analyze/types";
+import { apiGet } from "@/lib/api-client";
 import { crossAnalysisKey } from "@/stores/app-store";
 
 export async function fetchCrossAnalysis(
   contracts: string[]
 ): Promise<CrossAnalysisResult> {
-  const res = await fetch(
+  return apiGet(
     `/api/analyze/cross?contracts=${encodeURIComponent(contracts.join(","))}`
   );
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error ?? "Cross-analysis failed");
-  return data as CrossAnalysisResult;
 }
 
 export async function fetchFundTrace(
   contractAddress: string
 ): Promise<FundTraceResult> {
-  const res = await fetch(
+  return apiGet(
     `/api/analyze/fund-trace?contract=${encodeURIComponent(contractAddress)}`
   );
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error ?? "Fund trace failed");
-  return data as FundTraceResult;
 }
 
 export function crossResultKey(contracts: string[]) {
@@ -44,10 +39,7 @@ export async function fetchWalletAnalyze(
 ): Promise<WalletProfile> {
   const params = new URLSearchParams({ wallet, contract });
   if (percent != null) params.set("percent", String(percent));
-  const res = await fetch(`/api/analyze/wallet?${params}`);
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error ?? "Analyze failed");
-  return data as WalletProfile;
+  return apiGet(`/api/analyze/wallet?${params}`);
 }
 
 export async function fetchWalletNetwork(
@@ -60,10 +52,7 @@ export async function fetchWalletNetwork(
     window: String(windowDays),
   });
   if (contract) params.set("contract", contract);
-  const res = await fetch(`/api/analyze/network?${params}`);
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error ?? "Network analysis failed");
-  return data as WalletNetworkResult;
+  return apiGet(`/api/analyze/network?${params}`);
 }
 
 export async function fetchExposeScan(
@@ -73,10 +62,7 @@ export async function fetchExposeScan(
   const params = new URLSearchParams({ contract: contractAddress });
   if (options?.full === false) params.set("full", "0");
   if (options?.refresh) params.set("refresh", "1");
-  const res = await fetch(`/api/analyze/expose-scan?${params}`);
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error ?? "Expose scan failed");
-  return data as ExposeScanResult & { proRequired?: boolean };
+  return apiGet(`/api/analyze/expose-scan?${params}`);
 }
 
 export async function fetchProAlphaScan(
@@ -85,10 +71,7 @@ export async function fetchProAlphaScan(
 ): Promise<ProAlphaScanResult> {
   const params = new URLSearchParams({ contract: contractAddress });
   if (options?.refresh) params.set("refresh", "1");
-  const res = await fetch(`/api/analyze/pro-alpha?${params}`);
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error ?? "Pro alpha scan failed");
-  return data as ProAlphaScanResult;
+  return apiGet(`/api/analyze/pro-alpha?${params}`);
 }
 
 export async function fetchBulkExpose(
@@ -99,10 +82,7 @@ export async function fetchBulkExpose(
     contract: contractAddress,
     window: String(windowDays),
   });
-  const res = await fetch(`/api/analyze/expose?${params}`);
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error ?? "Bulk expose failed");
-  return data as BulkExposeResult;
+  return apiGet(`/api/analyze/expose?${params}`);
 }
 
 export async function fetchTrackRefresh(
@@ -111,8 +91,5 @@ export async function fetchTrackRefresh(
 ): Promise<WalletTrackSnapshot> {
   const params = new URLSearchParams({ wallet });
   if (contract) params.set("contract", contract);
-  const res = await fetch(`/api/track/refresh?${params}`);
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error ?? "Track refresh failed");
-  return data as WalletTrackSnapshot;
+  return apiGet(`/api/track/refresh?${params}`);
 }

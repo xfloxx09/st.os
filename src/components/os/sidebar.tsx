@@ -103,19 +103,11 @@ export function Sidebar() {
 
     try {
 
-      const res = await fetch(
+      const { apiGet } = await import("@/lib/api-client");
 
+      const result = (await apiGet(
         `/api/analyze/ca?address=${encodeURIComponent(item.contractAddress)}`
-
-      );
-
-      const data = await res.json();
-
-      if (!res.ok) throw new Error(data.error ?? "Failed to load");
-
-
-
-      const result = data as CaAnalysisResult & {
+      )) as CaAnalysisResult & {
 
         searchHistory: SearchHistoryItem[];
 

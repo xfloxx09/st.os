@@ -43,9 +43,11 @@ function pnlCell(
 export function ProTrackPanel({
   contractAddress,
   isPro,
+  active = true,
 }: {
   contractAddress: string;
   isPro: boolean;
+  active?: boolean;
 }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -80,9 +82,11 @@ export function ProTrackPanel({
   };
 
   useEffect(() => {
-    if (isPro) void runScan();
+    if (!isPro || !active) return;
+    const delay = setTimeout(() => void runScan(), 1500);
+    return () => clearTimeout(delay);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [contractAddress, isPro]);
+  }, [contractAddress, isPro, active]);
 
   if (!isPro) {
     return (

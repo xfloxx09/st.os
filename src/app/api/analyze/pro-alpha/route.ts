@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { analyzeContractAddress } from "@/lib/analyze/ca-analyzer";
+import { loadCaAnalysis } from "@/lib/analyze/load-ca-analysis";
 import { scanProAlphaTargets } from "@/lib/analyze/pro-alpha-scan";
 import type { ProAlphaScanResult } from "@/lib/analyze/types";
 import { hasActiveSubscription } from "@/lib/billing/subscription";
@@ -10,6 +10,8 @@ import {
 } from "@/lib/cache/wallet-cache";
 import { isValidEthAddress, normalizeAddress } from "@/lib/ethereum";
 import { checkRateLimit, rateLimitErrorMessage } from "@/lib/rate-limit";
+
+export const maxDuration = 120;
 
 export async function GET(request: NextRequest) {
   const session = await getAuthSession();
@@ -56,7 +58,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const analysis = await analyzeContractAddress(normalized, { isPro: true });
+    const analysis = await loadCaAnalysis(normalized, { isPro: true });
     const result = await scanProAlphaTargets(
       normalized,
       analysis.overview,

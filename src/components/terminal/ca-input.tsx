@@ -4,6 +4,7 @@ import { useRef, useState, type FormEvent } from "react";
 import { useAppStore } from "@/stores/app-store";
 import type { CaAnalysisResult } from "@/lib/analyze/types";
 import type { SearchHistoryItem } from "@/stores/app-store";
+import { apiGet } from "@/lib/api-client";
 import { isValidEthAddress } from "@/lib/ethereum";
 import { elapsedMs, startTimer } from "@/lib/timing";
 
@@ -34,16 +35,9 @@ export function CaInput() {
     const start = startTimer();
 
     try {
-      const res = await fetch(
+      const result = (await apiGet(
         `/api/analyze/ca?address=${encodeURIComponent(trimmed)}`
-      );
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.error ?? "Analysis failed");
-      }
-
-      const result = data as CaAnalysisResult & {
+      )) as CaAnalysisResult & {
         searchHistory: SearchHistoryItem[];
         guest?: {
           guestId: string;

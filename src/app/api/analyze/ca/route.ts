@@ -12,6 +12,8 @@ import { checkRateLimit, rateLimitErrorMessage } from "@/lib/rate-limit";
 import { getSearchHistory, recordSearch } from "@/lib/search-history";
 import { hasActiveSubscription } from "@/lib/billing/subscription";
 
+export const maxDuration = 120;
+
 export async function GET(request: NextRequest) {
   const session = await getAuthSession();
   if (!session) {
