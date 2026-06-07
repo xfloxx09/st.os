@@ -10,11 +10,11 @@ const ibmPlexMono = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "CA.OS — Contract Address Intelligence Terminal",
+  title: "EXPOSED.OS — On-Chain Wallet & Holder Intelligence",
   description:
-    "Browser-based Ethereum token forensics terminal. Paste a contract address. Analyze the holders.",
+    "Expose who holds. Expose who they run with. Ethereum forensics terminal with wallet tracking and syndicate maps.",
   openGraph: {
-    title: "CA.OS",
+    title: "EXPOSED.OS",
     description: "On-chain intelligence terminal for Ethereum tokens",
     type: "website",
   },

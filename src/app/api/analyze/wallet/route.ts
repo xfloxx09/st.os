@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
   const { hasActiveSubscription } = await import("@/lib/billing/subscription");
   if (!(await hasActiveSubscription(session.userId))) {
     return NextResponse.json(
-      { error: "CA.OS Pro required for wallet deep-dive. See /pricing" },
+      { error: "EXPOSED.OS Pro required for wallet deep-dive. See /pricing" },
       { status: 402 }
     );
   }

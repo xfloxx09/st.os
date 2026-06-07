@@ -50,7 +50,7 @@ export async function fetchTopHolders(
       warning: isProOnly
         ? options?.isPro
           ? "Etherscan Pro API key required on server — contact support"
-          : "Free tier: Blockscout holders. Upgrade to CA.OS Pro for direct Etherscan pipeline + wallet analyze."
+          : "Free tier: Blockscout holders. Upgrade to EXPOSED.OS Pro for direct Etherscan pipeline + wallet analyze."
         : undefined,
     };
   }

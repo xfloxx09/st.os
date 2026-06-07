@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { jwtVerify } from "jose";
 
-const SESSION_COOKIE = "ca_session";
-const LEGACY_SESSION_COOKIE = "stalker_session";
+const SESSION_COOKIE = "exposed_session";
+const LEGACY_SESSION_COOKIES = ["ca_session", "stalker_session"];
 const PROTECTED_PREFIXES = ["/api/analyze"];
 
 function getSecret() {
@@ -19,9 +19,13 @@ export async function middleware(request: NextRequest) {
   );
   if (!isProtected) return NextResponse.next();
 
-  const token =
-    request.cookies.get(SESSION_COOKIE)?.value ??
-    request.cookies.get(LEGACY_SESSION_COOKIE)?.value;
+  let token = request.cookies.get(SESSION_COOKIE)?.value;
+  if (!token) {
+    for (const name of LEGACY_SESSION_COOKIES) {
+      token = request.cookies.get(name)?.value;
+      if (token) break;
+    }
+  }
   const secret = getSecret();
 
   if (!token || !secret) {

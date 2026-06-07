@@ -69,7 +69,7 @@ export function AdminPanel() {
     <div className="min-h-screen bg-[var(--bg)] text-[var(--text-primary)]">
       <header className="border-b border-[var(--border)] bg-[var(--bg-panel)] px-6 py-4">
         <div className="mx-auto flex max-w-3xl items-center justify-between">
-          <span className="tracking-[0.25em] text-[var(--accent)]">CA.OS ADMIN</span>
+          <span className="tracking-[0.25em] text-[var(--accent)]">EXPOSED.OS ADMIN</span>
           <Link href="/" className="text-xs text-[var(--text-secondary)]">
             ← Terminal
           </Link>

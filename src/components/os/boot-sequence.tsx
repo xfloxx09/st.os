@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useAppStore } from "@/stores/app-store";
 
 const LINES = [
-  "CA.OS v1.0 — INITIALIZING...",
+  "EXPOSED.OS v1.0 — INITIALIZING...",
   "LOADING KERNEL MODULES...",
   "CONNECTING TO ETH MAINNET...",
   "VERIFYING AUTH CHANNELS...",

@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
 
   if (!(await hasActiveSubscription(session.userId))) {
     return NextResponse.json(
-      { error: "CA.OS Pro required for fund tracing. See /pricing" },
+      { error: "EXPOSED.OS Pro required for fund tracing. See /pricing" },
       { status: 402 }
     );
   }

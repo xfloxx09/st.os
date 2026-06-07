@@ -400,13 +400,13 @@ export function HolderRosterPanel({
 
             </a>{" "}
 
-            (server) + CA.OS Pro (you).
+            (server) + EXPOSED.OS Pro (you).
 
           </p>
 
           <Link href="/pricing" className="mt-2 inline-block text-[var(--accent)] underline">
 
-            Upgrade to CA.OS Pro →
+            Upgrade to EXPOSED.OS Pro →
 
           </Link>
 

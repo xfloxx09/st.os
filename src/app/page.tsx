@@ -1,5 +1,5 @@
-import { TerminalShell } from "@/components/os/terminal-shell";
+import { LandingPage } from "@/components/marketing/landing-page";
 
 export default function Home() {
-  return <TerminalShell />;
+  return <LandingPage />;
 }

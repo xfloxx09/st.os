@@ -114,15 +114,15 @@ export function Workspace() {
 
             <p className="mb-2 text-xs tracking-[0.3em] text-[var(--accent)]">
 
-              AUTH REQUIRED
+              EXPOSED.OS — SIGN IN
 
             </p>
 
             <p className="mb-6 text-sm text-[var(--text-secondary)]">
 
-              Connect Telegram for full access, or continue as guest for 5 CA
+              Connect Telegram for full access, or guest mode for 5 free contract
 
-              searches.
+              scans.
 
             </p>
 
@@ -145,6 +145,12 @@ export function Workspace() {
               <GuestLogin />
 
             </div>
+
+            <p className="mt-4 text-[10px] text-[var(--text-secondary)]">
+              <a href="/" className="underline hover:text-[var(--accent)]">About</a>
+              {" · "}
+              <a href="/pricing" className="underline hover:text-[var(--accent)]">Pricing</a>
+            </p>
 
           </div>
 

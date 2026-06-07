@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
 
   if (!(await hasActiveSubscription(session.userId))) {
     return NextResponse.json(
-      { error: "CA.OS Pro required to track wallets. See /pricing" },
+      { error: "EXPOSED.OS Pro required to track wallets. See /pricing" },
       { status: 402 }
     );
   }

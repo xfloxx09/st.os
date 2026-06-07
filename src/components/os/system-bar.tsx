@@ -30,9 +30,11 @@ export function SystemBar() {
         >
           [::]
         </button>
-        <span className="tracking-[0.25em] text-[var(--accent)]">CA.OS</span>
+        <Link href="/" className="tracking-[0.25em] text-[var(--accent)]">
+          EXPOSED.OS
+        </Link>
         <Link href="/pricing" className="text-[10px] text-[var(--text-secondary)] hover:text-[var(--accent)]">
-          PRO
+          PRICING
         </Link>
       </div>
 

@@ -99,6 +99,6 @@ export async function getPublicPricing(): Promise<PricingPublicResponse> {
       "Priority API rate limits",
     ],
     upgradeNote:
-      "Free tier uses Blockscout for holders because Etherscan tokenholderlist requires API Pro ($49/mo server-side). CA.OS Pro unlocks the full forensics stack — pay with ETH or hold CA tokens.",
+      "Free tier uses Blockscout for holders because Etherscan tokenholderlist requires API Pro ($49/mo server-side). EXPOSED.OS Pro unlocks the full forensics stack — pay with ETH or hold EXPOSED tokens.",
   };
 }

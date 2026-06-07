@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
 
   if (!(await hasActiveSubscription(session.userId))) {
     return NextResponse.json(
-      { error: "CA.OS Pro required for wallet network map. See /pricing" },
+      { error: "EXPOSED.OS Pro required for wallet network map. See /pricing" },
       { status: 402 }
     );
   }

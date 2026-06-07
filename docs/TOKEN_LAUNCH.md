@@ -1,6 +1,6 @@
 # CA Coin — Token Launch Guide
 
-CA.OS uses an ERC-20 **CA** token for holder-based subscriptions (similar in spirit to [Market Stalker's holder model](https://themarketstalker.com/#pricing), but this is your own token and product).
+EXPOSED.OS uses an ERC-20 token for holder-based subscriptions (similar in spirit to [Market Stalker's holder model](https://themarketstalker.com/#pricing), but this is your own token and product).
 
 Reference token (NOT yours — research only): `0x522Ec96bCed6dc26325120EdF3931d34E417a620`
 
@@ -21,8 +21,8 @@ Reference token (NOT yours — research only): `0x522Ec96bCed6dc26325120EdF3931d
 
 ## Token design (simple)
 
-- **Name:** CA.OS Token (or your brand)
-- **Symbol:** CA
+- **Name:** EXPOSED.OS Token (or your brand)
+- **Symbol:** EXPOSED (or CA if already deployed)
 - **Supply:** 1,000,000,000 (1B) — adjust as needed
 - **Decimals:** 18
 - **Features:** No mint after deploy (fixed supply), no tax (cleaner for CEX/DexScreener)
@@ -41,7 +41,7 @@ Avoid honeypot / high tax — your app reads balances via Alchemy.
 6. Set **Treasury address** in admin (wallet that receives ETH payments)
 7. Announce CA token address to community
 
-## Configure CA.OS after launch
+## Configure EXPOSED.OS after launch
 
 ### Railway variables
 
@@ -53,7 +53,7 @@ CA_TOKEN_CONTRACT=0xYourTokenAddress
 
 1. Bootstrap admin (once):
    ```
-   https://YOUR-URL/api/admin/bootstrap?key=ca-os-admin-bootstrap-2026&telegram_id=YOUR_TELEGRAM_ID
+   https://YOUR-URL/api/admin/bootstrap?key=exposed-os-admin-bootstrap-2026&telegram_id=YOUR_TELEGRAM_ID
    ```
 2. Log in with Telegram → visit `/admin`
 3. Set:
@@ -86,7 +86,7 @@ Holder **direct pipeline** also needs [Etherscan API Pro](https://docs.etherscan
 ETHERSCAN_API_KEY=your_pro_key
 ```
 
-CA.OS Pro subscription unlocks features for users; you add the Pro API key on Railway.
+EXPOSED.OS Pro subscription unlocks features for users; you add the Pro API key on Railway.
 
 ## Security
 
