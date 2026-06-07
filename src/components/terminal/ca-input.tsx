@@ -5,6 +5,7 @@ import { useAppStore } from "@/stores/app-store";
 import type { CaAnalysisResult } from "@/lib/analyze/types";
 import type { SearchHistoryItem } from "@/stores/app-store";
 import { isValidEthAddress } from "@/lib/ethereum";
+import { elapsedMs, startTimer } from "@/lib/timing";
 
 export function CaInput() {
   const inputRef = useRef<HTMLInputElement>(null);
@@ -29,7 +30,7 @@ export function CaInput() {
     setAnalyzeError(null);
     setLoading(true);
     setActiveProcesses(activeProcesses + 1);
-    const start = Date.now();
+    const start = startTimer();
 
     try {
       const res = await fetch(
@@ -48,7 +49,7 @@ export function CaInput() {
       setAnalysis(result.contractAddress, result);
       openAnalysisPanels(result.contractAddress);
       setSearchHistory(result.searchHistory);
-      setLastQueryMs(Date.now() - start);
+      setLastQueryMs(elapsedMs(start));
       setValue("");
     } catch (err) {
       setAnalyzeError(err instanceof Error ? err.message : "Analysis failed");

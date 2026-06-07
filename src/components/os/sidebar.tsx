@@ -5,6 +5,7 @@ import { useAppStore } from "@/stores/app-store";
 import type { CaAnalysisResult } from "@/lib/analyze/types";
 import type { SearchHistoryItem } from "@/stores/app-store";
 import { isValidEthAddress } from "@/lib/ethereum";
+import { elapsedMs, startTimer } from "@/lib/timing";
 
 export function Sidebar() {
   const sidebarOpen = useAppStore((s) => s.sidebarOpen);
@@ -21,7 +22,7 @@ export function Sidebar() {
 
     setLoadingId(item.id);
     setAnalyzeError(null);
-    const start = Date.now();
+    const start = startTimer();
 
     try {
       const res = await fetch(
@@ -37,7 +38,7 @@ export function Sidebar() {
       setAnalysis(result.contractAddress, result);
       openAnalysisPanels(result.contractAddress);
       setSearchHistory(result.searchHistory);
-      setLastQueryMs(Date.now() - start);
+      setLastQueryMs(elapsedMs(start));
     } catch (err) {
       setAnalyzeError(err instanceof Error ? err.message : "Failed to load");
     } finally {
