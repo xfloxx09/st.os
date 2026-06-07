@@ -130,6 +130,49 @@ export interface WalletTrackSnapshot extends WalletProfile {
 export interface CrossHolderOverlap {
   address: string;
   label: string | null;
-  tokens: Array<{ contractAddress: string; percentOfSupply: number }>;
+  tokens: Array<{
+    contractAddress: string;
+    symbol: string | null;
+    percentOfSupply: number;
+  }>;
   overlapScore: number;
+  insiderScore: number;
+}
+
+export interface SharedFundSource {
+  sourceAddress: string;
+  label: string | null;
+  holderAddresses: string[];
+  holderRanks: number[];
+  suspicionScore: number;
+  flags: string[];
+}
+
+export interface FundTraceEntry {
+  holderAddress: string;
+  holderRank: number;
+  holderLabel: string | null;
+  percentOfSupply: number;
+  fundOrigin: FundOrigin;
+}
+
+export interface FundTraceResult {
+  contractAddress: string;
+  tokenSymbol: string | null;
+  entries: FundTraceEntry[];
+  sharedSources: SharedFundSource[];
+  insiderClusterScore: number;
+  fetchedAt: string;
+  cached: boolean;
+}
+
+export interface CrossAnalysisResult {
+  contracts: string[];
+  tokenSymbols: Record<string, string | null>;
+  overlaps: CrossHolderOverlap[];
+  sharedFundSources: SharedFundSource[];
+  totalOverlappingWallets: number;
+  topInsiderCandidates: CrossHolderOverlap[];
+  fetchedAt: string;
+  cached: boolean;
 }

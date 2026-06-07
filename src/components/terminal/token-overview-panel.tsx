@@ -1,11 +1,15 @@
 "use client";
 
+import { useState } from "react";
 import type { TokenOverview } from "@/lib/analyze/types";
 import {
   formatPercent,
   formatUsd,
   truncateAddress,
 } from "@/lib/ethereum";
+import { fetchFundTrace } from "@/lib/terminal/phase-actions";
+import { elapsedMs, startTimer } from "@/lib/timing";
+import { useAppStore } from "@/stores/app-store";
 
 function flagColor(level: string) {
   if (level === "danger") return "text-[var(--danger)] border-[var(--danger)]";
@@ -16,10 +20,46 @@ function flagColor(level: string) {
 export function TokenOverviewPanel({
   overview,
   cached,
+  contractAddress,
 }: {
   overview: TokenOverview;
   cached?: boolean;
+  contractAddress?: string;
 }) {
+  const [tracing, setTracing] = useState(false);
+  const user = useAppStore((s) => s.user);
+  const openFundTracerPanel = useAppStore((s) => s.openFundTracerPanel);
+  const setFundTrace = useAppStore((s) => s.setFundTrace);
+  const toggleCrossCompare = useAppStore((s) => s.toggleCrossCompare);
+  const crossCompareSelection = useAppStore((s) => s.crossCompareSelection);
+  const setAnalyzeError = useAppStore((s) => s.setAnalyzeError);
+  const setActiveProcesses = useAppStore((s) => s.setActiveProcesses);
+  const ca = contractAddress ?? overview.address;
+
+  const onTraceFunds = async () => {
+    if (!user) {
+      setAnalyzeError("Connect Telegram for fund tracing.");
+      return;
+    }
+    setTracing(true);
+    setAnalyzeError(null);
+    setActiveProcesses(useAppStore.getState().activeProcesses + 1);
+    const start = startTimer();
+    try {
+      const result = await fetchFundTrace(ca);
+      setFundTrace(ca, result);
+      openFundTracerPanel(ca);
+      useAppStore.getState().setLastQueryMs(elapsedMs(start));
+    } catch (err) {
+      setAnalyzeError(err instanceof Error ? err.message : "Fund trace failed");
+    } finally {
+      setTracing(false);
+      setActiveProcesses(Math.max(0, useAppStore.getState().activeProcesses - 1));
+    }
+  };
+
+  const inCross = crossCompareSelection.map((c) => c.toLowerCase()).includes(ca.toLowerCase());
+
   return (
     <div className="space-y-4 text-[11px]">
       <div>
@@ -36,6 +76,30 @@ export function TokenOverviewPanel({
           </div>
         ) : null}
       </div>
+
+      {user ? (
+        <div className="flex flex-wrap gap-2 border-b border-[var(--border)] pb-3">
+          <button
+            type="button"
+            onClick={() => void onTraceFunds()}
+            disabled={tracing}
+            className="border border-[var(--warning)] px-2 py-1 text-[10px] text-[var(--warning)] hover:bg-[var(--warning)] hover:text-[var(--bg)] disabled:opacity-40"
+          >
+            {tracing ? "TRACING..." : "TRACE FUNDS"}
+          </button>
+          <button
+            type="button"
+            onClick={() => toggleCrossCompare(ca)}
+            className={`border px-2 py-1 text-[10px] ${
+              inCross
+                ? "border-[var(--accent)] bg-[var(--accent)] text-[var(--bg)]"
+                : "border-[var(--accent)] text-[var(--accent)] hover:bg-[var(--accent)] hover:text-[var(--bg)]"
+            }`}
+          >
+            {inCross ? "IN CROSS SET" : "ADD TO CROSS"}
+          </button>
+        </div>
+      ) : null}
 
       <div className="grid grid-cols-2 gap-3">
         <Stat label="PRICE" value={formatUsd(overview.priceUsd)} />

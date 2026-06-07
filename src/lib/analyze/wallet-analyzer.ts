@@ -31,7 +31,7 @@ function tokenAmount(raw: string, decimals: number): number {
   return Number(raw) / 10 ** decimals;
 }
 
-async function traceFundOrigin(walletAddress: string): Promise<FundOrigin> {
+export async function traceFundOrigin(walletAddress: string): Promise<FundOrigin> {
   const txs = await fetchEthTransactions(walletAddress, 1, 25).catch(() => []);
   const inflows = txs
     .filter((tx) => normalizeAddress(tx.to) === walletAddress && tx.isError === "0")
