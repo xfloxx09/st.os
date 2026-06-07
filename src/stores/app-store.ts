@@ -63,7 +63,7 @@ interface AppState {
   restorePanel: (id: string) => void;
   focusPanel: (id: string) => void;
   movePanel: (id: string, x: number, y: number) => void;
-  openAnalysisPanels: (contractAddress: string, symbol: string) => void;
+  openAnalysisPanels: (contractAddress: string) => void;
 }
 
 export const useAppStore = create<AppState>((set) => ({
@@ -140,7 +140,7 @@ export const useAppStore = create<AppState>((set) => ({
     set((s) => ({
       panels: s.panels.map((p) => (p.id === id ? { ...p, x, y } : p)),
     })),
-  openAnalysisPanels: (contractAddress, symbol) =>
+  openAnalysisPanels: (contractAddress) =>
     set((s) => {
       const overviewId = `overview-${contractAddress}`;
       const rosterId = `roster-${contractAddress}`;

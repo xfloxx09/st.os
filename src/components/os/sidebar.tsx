@@ -21,7 +21,7 @@ export function Sidebar() {
 
     setLoadingId(item.id);
     setAnalyzeError(null);
-    const start = performance.now();
+    const start = Date.now();
 
     try {
       const res = await fetch(
@@ -35,12 +35,9 @@ export function Sidebar() {
       };
 
       setAnalysis(result.contractAddress, result);
-      openAnalysisPanels(
-        result.contractAddress,
-        result.overview.symbol
-      );
+      openAnalysisPanels(result.contractAddress);
       setSearchHistory(result.searchHistory);
-      setLastQueryMs(performance.now() - start);
+      setLastQueryMs(Date.now() - start);
     } catch (err) {
       setAnalyzeError(err instanceof Error ? err.message : "Failed to load");
     } finally {

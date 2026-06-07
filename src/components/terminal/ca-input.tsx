@@ -29,7 +29,7 @@ export function CaInput() {
     setAnalyzeError(null);
     setLoading(true);
     setActiveProcesses(activeProcesses + 1);
-    const start = performance.now();
+    const start = Date.now();
 
     try {
       const res = await fetch(
@@ -46,9 +46,9 @@ export function CaInput() {
       };
 
       setAnalysis(result.contractAddress, result);
-      openAnalysisPanels(result.contractAddress, result.overview.symbol);
+      openAnalysisPanels(result.contractAddress);
       setSearchHistory(result.searchHistory);
-      setLastQueryMs(performance.now() - start);
+      setLastQueryMs(Date.now() - start);
       setValue("");
     } catch (err) {
       setAnalyzeError(err instanceof Error ? err.message : "Analysis failed");
