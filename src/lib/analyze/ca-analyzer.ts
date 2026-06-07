@@ -12,12 +12,11 @@ import {
 } from "@/lib/labels";
 import { normalizeAddress } from "@/lib/ethereum";
 import type { CaAnalysisResult, HolderEntry, RiskFlag, TokenOverview } from "@/lib/analyze/types";
-
-function parseSupply(raw: string, decimals: number): number {
-  const value = Number(raw);
-  if (!Number.isFinite(value) || value <= 0) return 0;
-  return value / 10 ** decimals;
-}
+import {
+  percentOfRawSupply,
+  rawToHuman,
+  resolveTotalSupplyRaw,
+} from "@/lib/analyze/token-amount";
 
 function buildRiskFlags(
   verified: boolean,
@@ -84,9 +83,15 @@ export async function analyzeContractAddress(
   const rawHolders = holderResult.holders;
 
   const decimals = Number(tokenInfo?.divisor ?? "18");
-  const totalSupplyRaw = tokenInfo?.totalSupply ?? "0";
-  const totalSupplyNum = parseSupply(totalSupplyRaw, decimals);
   const priceUsd = dex?.priceUsd ? Number(dex.priceUsd) : null;
+  const totalSupplyRaw = resolveTotalSupplyRaw(
+    tokenInfo?.totalSupply,
+    rawHolders,
+    decimals,
+    dex?.marketCap ?? null,
+    priceUsd
+  );
+  const totalSupplyNum = rawToHuman(totalSupplyRaw.toString(), decimals);
   const verified =
     Boolean(source?.SourceCode) && source?.SourceCode !== "";
 
@@ -111,10 +116,12 @@ export async function analyzeContractAddress(
 
   const allHolders: HolderEntry[] = rawHolders.map((holder, index) => {
     const holderAddress = holder.address;
-    const balanceRaw = Number(holder.quantity);
-    const balance = balanceRaw / 10 ** decimals;
-    const percentOfSupply =
-      totalSupplyNum > 0 ? (balance / totalSupplyNum) * 100 : 0;
+    const balance = rawToHuman(holder.quantity, decimals);
+    const percentOfSupply = percentOfRawSupply(
+      holder.quantity,
+      totalSupplyRaw,
+      decimals
+    );
     const label = holder.label ?? getAddressLabel(holderAddress);
     const excluded = shouldExcludeHolder(holderAddress, address);
 

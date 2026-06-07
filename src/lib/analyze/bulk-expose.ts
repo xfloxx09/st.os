@@ -1,4 +1,4 @@
-import type { BulkExposeEntry, BulkExposeResult, FishyWallet } from "@/lib/analyze/types";
+import type { BulkExposeEntry, BulkExposeResult, ExposedWallet } from "@/lib/analyze/types";
 import { buildWalletNetwork, type NetworkWindow } from "@/lib/analyze/wallet-network";
 import { getAddressLabel } from "@/lib/labels";
 import { normalizeAddress } from "@/lib/ethereum";
@@ -21,23 +21,23 @@ async function runInBatches<T, R>(
 
 export async function bulkExposeWallets(
   contractAddress: string,
-  fishyWallets: FishyWallet[],
+  exposedWallets: ExposedWallet[],
   windowDays: NetworkWindow = 90
 ): Promise<BulkExposeResult> {
   const normalized = normalizeAddress(contractAddress);
-  const targets = fishyWallets.slice(0, MAX_TARGETS);
+  const targets = exposedWallets.slice(0, MAX_TARGETS);
 
-  const entries = await runInBatches(fishyWallets.slice(0, MAX_TARGETS), async (fishy) => {
+  const entries = await runInBatches(targets, async (exposed) => {
     const entry: BulkExposeEntry = {
-      walletAddress: fishy.address,
-      label: fishy.label ?? getAddressLabel(fishy.address),
-      fishyScore: fishy.fishyScore,
+      walletAddress: exposed.address,
+      label: exposed.label ?? getAddressLabel(exposed.address),
+      exposeScore: exposed.exposeScore,
       network: null,
     };
 
     try {
       entry.network = await buildWalletNetwork(
-        fishy.address,
+        exposed.address,
         windowDays,
         normalized
       );

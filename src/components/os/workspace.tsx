@@ -406,7 +406,7 @@ export function Workspace() {
 
                   <p className="scan-line text-[var(--text-secondary)]">
 
-                    RUNNING BULK EXPOSE... MAPPING FISHY WALLETS...
+                    RUNNING BULK EXPOSE... MAPPING EXPOSED WALLETS...
 
                   </p>
 

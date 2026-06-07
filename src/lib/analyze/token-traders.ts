@@ -1,154 +1,97 @@
 import type { TraderEntry } from "@/lib/analyze/types";
+import { calculateWalletTokenPnl } from "@/lib/analyze/token-pnl";
 import { fetchTokenTransfers } from "@/lib/alchemy";
 import { fetchTokenTransactions } from "@/lib/etherscan-wallet";
 import { normalizeAddress } from "@/lib/ethereum";
 import { getAddressLabel, shouldExcludeHolder } from "@/lib/labels";
 import type { HolderEntry } from "@/lib/analyze/types";
 
-interface TraderAgg {
-  address: string;
-  buyCount: number;
-  sellCount: number;
-  transferInCount: number;
-  transferOutCount: number;
-  totalVolume: number;
-  netVolume: number;
-  tradeCount: number;
-  firstTradeAt: string | null;
-  lastTradeAt: string | null;
-}
+const WALLET_SCAN_LIMIT = 22;
+const BATCH_SIZE = 4;
 
-function bumpAgg(
-  agg: TraderAgg,
-  direction: "in" | "out",
-  volume: number,
-  timestamp: string | null
-) {
-  agg.tradeCount += 1;
-  agg.totalVolume += volume;
-  if (direction === "in") {
-    agg.transferInCount += 1;
-    agg.netVolume += volume;
-  } else {
-    agg.transferOutCount += 1;
-    agg.netVolume -= volume;
-  }
-  if (timestamp) {
-    if (!agg.firstTradeAt || timestamp < agg.firstTradeAt) {
-      agg.firstTradeAt = timestamp;
-    }
-    if (!agg.lastTradeAt || timestamp > agg.lastTradeAt) {
-      agg.lastTradeAt = timestamp;
-    }
-  }
-}
-
-function getOrCreate(
-  map: Map<string, TraderAgg>,
-  address: string
-): TraderAgg {
-  const key = normalizeAddress(address);
-  const existing = map.get(key);
-  if (existing) return existing;
-  const agg: TraderAgg = {
-    address: key,
-    buyCount: 0,
-    sellCount: 0,
-    transferInCount: 0,
-    transferOutCount: 0,
-    totalVolume: 0,
-    netVolume: 0,
-    tradeCount: 0,
-    firstTradeAt: null,
-    lastTradeAt: null,
-  };
-  map.set(key, agg);
-  return agg;
-}
-
-async function tradersFromHolderTxs(
+async function collectWalletCandidates(
   contractAddress: string,
-  holders: HolderEntry[],
-  decimals: number
-): Promise<TraderEntry[]> {
-  const map = new Map<string, TraderAgg>();
-  const targets = holders.filter((h) => !h.excluded).slice(0, 15);
+  holders: HolderEntry[]
+): Promise<string[]> {
+  const normalized = normalizeAddress(contractAddress);
+  const seen = new Set<string>();
 
-  for (const holder of targets) {
-    const txs = await fetchTokenTransactions(
-      holder.address,
-      contractAddress,
-      1,
-      80
-    ).catch(() => []);
-
-    for (const tx of txs) {
-      const from = normalizeAddress(tx.from);
-      const to = normalizeAddress(tx.to);
-      const amount = Number(tx.value) / 10 ** decimals;
-      const ts = new Date(Number(tx.timeStamp) * 1000).toISOString();
-
-      if (!shouldExcludeHolder(from, contractAddress)) {
-        bumpAgg(getOrCreate(map, from), "out", amount, ts);
-      }
-      if (!shouldExcludeHolder(to, contractAddress)) {
-        bumpAgg(getOrCreate(map, to), "in", amount, ts);
-      }
-    }
+  for (const holder of holders.filter((h) => !h.excluded).slice(0, 30)) {
+    seen.add(normalizeAddress(holder.address));
   }
 
-  return finalizeTraders(map);
+  const transfers = await fetchTokenTransfers(normalized, 400);
+  for (const tx of transfers) {
+    const from = normalizeAddress(tx.from);
+    const to = normalizeAddress(tx.to);
+    if (!shouldExcludeHolder(from, normalized)) seen.add(from);
+    if (!shouldExcludeHolder(to, normalized)) seen.add(to);
+    if (seen.size >= 60) break;
+  }
+
+  return [...seen].slice(0, 40);
 }
 
-function finalizeTraders(map: Map<string, TraderAgg>): TraderEntry[] {
-  return [...map.values()]
-    .filter((t) => t.tradeCount >= 2)
-    .sort((a, b) => b.totalVolume - a.totalVolume)
-    .slice(0, 25)
-    .map((t, index) => ({
-      rank: index + 1,
-      address: t.address,
-      label: getAddressLabel(t.address),
-      buyCount: t.buyCount,
-      sellCount: t.sellCount,
-      transferInCount: t.transferInCount,
-      transferOutCount: t.transferOutCount,
-      totalVolume: t.totalVolume,
-      netVolume: t.netVolume,
-      tradeCount: t.tradeCount,
-      firstTradeAt: t.firstTradeAt,
-      lastTradeAt: t.lastTradeAt,
-    }));
+async function pnlForWallet(
+  wallet: string,
+  contractAddress: string,
+  decimals: number,
+  priceUsd: number | null
+): Promise<TraderEntry | null> {
+  const txs = await fetchTokenTransactions(
+    wallet,
+    contractAddress,
+    1,
+    120
+  ).catch(() => []);
+
+  if (txs.length === 0) return null;
+
+  const txDecimals = Number(txs[0]?.tokenDecimal ?? String(decimals));
+  const pnl = calculateWalletTokenPnl(txs, wallet, txDecimals, priceUsd);
+
+  if (pnl.tradeCount === 0) return null;
+  if (pnl.totalPnlUsd == null && pnl.position <= 0) return null;
+
+  return {
+    rank: 0,
+    address: normalizeAddress(wallet),
+    label: getAddressLabel(wallet),
+    position: pnl.position,
+    realizedPnlUsd: pnl.realizedPnlUsd,
+    unrealizedPnlUsd: pnl.unrealizedPnlUsd,
+    totalPnlUsd: pnl.totalPnlUsd,
+    pnlPercent: pnl.pnlPercent,
+    tradeCount: pnl.tradeCount,
+    status: pnl.status,
+  };
 }
 
 export async function fetchTopTraders(
   contractAddress: string,
   holders: HolderEntry[],
-  decimals: number
+  decimals: number,
+  priceUsd: number | null
 ): Promise<TraderEntry[]> {
   const normalized = normalizeAddress(contractAddress);
-  const transfers = await fetchTokenTransfers(normalized, 500);
+  const candidates = await collectWalletCandidates(normalized, holders);
+  const traders: TraderEntry[] = [];
 
-  if (transfers.length > 0) {
-    const map = new Map<string, TraderAgg>();
-
-    for (const tx of transfers) {
-      const from = normalizeAddress(tx.from);
-      const to = normalizeAddress(tx.to);
-      const volume = tx.value ?? 0;
-      const ts = tx.metadata.blockTimestamp;
-
-      if (!shouldExcludeHolder(from, normalized)) {
-        bumpAgg(getOrCreate(map, from), "out", volume, ts);
-      }
-      if (!shouldExcludeHolder(to, normalized)) {
-        bumpAgg(getOrCreate(map, to), "in", volume, ts);
-      }
+  for (let i = 0; i < candidates.length; i += BATCH_SIZE) {
+    const batch = candidates.slice(i, i + BATCH_SIZE);
+    const results = await Promise.all(
+      batch.map((wallet) =>
+        pnlForWallet(wallet, normalized, decimals, priceUsd)
+      )
+    );
+    for (const entry of results) {
+      if (entry) traders.push(entry);
     }
-
-    const fromTransfers = finalizeTraders(map);
-    if (fromTransfers.length >= 5) return fromTransfers;
+    if (traders.length >= WALLET_SCAN_LIMIT) break;
   }
 
-  return tradersFromHolderTxs(normalized, holders, decimals);
+  return traders
+    .sort((a, b) => (b.totalPnlUsd ?? 0) - (a.totalPnlUsd ?? 0))
+    .slice(0, 20)
+    .map((trader, index) => ({ ...trader, rank: index + 1 }));
 }

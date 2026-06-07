@@ -35,7 +35,7 @@ export function ExposeReportPanel({ result }: { result: BulkExposeResult }) {
           <thead className="sticky top-0 bg-[var(--bg-panel)] text-[var(--text-secondary)]">
             <tr className="border-b border-[var(--border)]">
               <th className="py-1 pr-2">WALLET</th>
-              <th className="py-1 pr-2 text-right">FISHY</th>
+              <th className="py-1 pr-2 text-right">SCORE</th>
               <th className="py-1 pr-2 text-right">NET</th>
               <th className="py-1 text-right">VERDICT</th>
             </tr>
@@ -50,7 +50,7 @@ export function ExposeReportPanel({ result }: { result: BulkExposeResult }) {
                   {entry.label ?? truncateAddress(entry.walletAddress, 6)}
                 </td>
                 <td className="py-1.5 pr-2 text-right text-[var(--warning)]">
-                  {entry.fishyScore}
+                  {entry.exposeScore}
                 </td>
                 <td className="py-1.5 pr-2 text-right">
                   {entry.network ? (

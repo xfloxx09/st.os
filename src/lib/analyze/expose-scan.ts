@@ -1,6 +1,6 @@
 import type {
   ExposeScanResult,
-  FishyWallet,
+  ExposedWallet,
   HolderEntry,
   SharedFundSource,
   TokenOverview,
@@ -10,7 +10,7 @@ import { fetchTopTraders } from "@/lib/analyze/token-traders";
 import { normalizeAddress } from "@/lib/ethereum";
 import { getAddressLabel } from "@/lib/labels";
 
-function fishyTier(score: number): FishyWallet["tier"] {
+function exposeTier(score: number): ExposedWallet["tier"] {
   if (score >= 75) return "CRITICAL";
   if (score >= 55) return "HIGH";
   if (score >= 35) return "MEDIUM";
@@ -20,11 +20,11 @@ function fishyTier(score: number): FishyWallet["tier"] {
 function scoreBasicHolders(
   holders: HolderEntry[],
   overview: TokenOverview
-): FishyWallet[] {
+): ExposedWallet[] {
   const deployer = overview.deployer
     ? normalizeAddress(overview.deployer)
     : null;
-  const results: FishyWallet[] = [];
+  const results: ExposedWallet[] = [];
 
   for (const holder of holders.filter((h) => !h.excluded).slice(0, 40)) {
     let score = 0;
@@ -62,8 +62,8 @@ function scoreBasicHolders(
         label: holder.label ?? getAddressLabel(holder.address),
         holderRank: holder.rank,
         percentOfSupply: holder.percentOfSupply,
-        fishyScore: Math.min(100, score),
-        tier: fishyTier(score),
+        exposeScore: Math.min(100, score),
+        tier: exposeTier(score),
         reasons,
         flags,
         sharedFundWith: [],
@@ -71,18 +71,22 @@ function scoreBasicHolders(
     }
   }
 
-  return results.sort((a, b) => b.fishyScore - a.fishyScore);
+  return results.sort((a, b) => b.exposeScore - a.exposeScore);
 }
 
 function mergeFundTraceScores(
-  basic: FishyWallet[],
+  basic: ExposedWallet[],
   sharedSources: SharedFundSource[],
   entries: Awaited<ReturnType<typeof traceTokenFunds>>["entries"]
-): FishyWallet[] {
-  const byAddress = new Map<string, FishyWallet>();
+): ExposedWallet[] {
+  const byAddress = new Map<string, ExposedWallet>();
 
-  for (const fishy of basic) {
-    byAddress.set(fishy.address, { ...fishy, reasons: [...fishy.reasons], flags: [...fishy.flags] });
+  for (const exposed of basic) {
+    byAddress.set(exposed.address, {
+      ...exposed,
+      reasons: [...exposed.reasons],
+      flags: [...exposed.flags],
+    });
   }
 
   for (const source of sharedSources) {
@@ -93,18 +97,18 @@ function mergeFundTraceScores(
         label: getAddressLabel(key),
         holderRank: null,
         percentOfSupply: null,
-        fishyScore: 0,
+        exposeScore: 0,
         tier: "LOW" as const,
         reasons: [] as string[],
         flags: [] as string[],
         sharedFundWith: [] as string[],
       };
 
-      existing.fishyScore = Math.min(
+      existing.exposeScore = Math.min(
         100,
-        existing.fishyScore + Math.round(source.suspicionScore * 0.45)
+        existing.exposeScore + Math.round(source.suspicionScore * 0.45)
       );
-      existing.tier = fishyTier(existing.fishyScore);
+      existing.tier = exposeTier(existing.exposeScore);
       existing.reasons.push(
         `Shares funding source with ${source.holderAddresses.length - 1} other holder(s)`
       );
@@ -125,39 +129,39 @@ function mergeFundTraceScores(
     if (!existing) continue;
 
     if (entry.fundOrigin.flags.length > 0) {
-      existing.fishyScore = Math.min(100, existing.fishyScore + 28);
+      existing.exposeScore = Math.min(100, existing.exposeScore + 28);
       existing.flags.push(...entry.fundOrigin.flags);
       existing.reasons.push(entry.fundOrigin.flags[0]);
     }
 
     if (entry.fundOrigin.hops >= 4) {
-      existing.fishyScore = Math.min(100, existing.fishyScore + 12);
+      existing.exposeScore = Math.min(100, existing.exposeScore + 12);
       existing.reasons.push(`Deep fund chain (${entry.fundOrigin.hops} hops)`);
       existing.flags.push("DEEP_CHAIN");
     }
 
     existing.holderRank = entry.holderRank;
     existing.percentOfSupply = entry.percentOfSupply;
-    existing.tier = fishyTier(existing.fishyScore);
+    existing.tier = exposeTier(existing.exposeScore);
     byAddress.set(key, existing);
   }
 
   return [...byAddress.values()]
-    .filter((f) => f.fishyScore >= 25)
-    .sort((a, b) => b.fishyScore - a.fishyScore)
+    .filter((f) => f.exposeScore >= 25)
+    .sort((a, b) => b.exposeScore - a.exposeScore)
     .slice(0, 20);
 }
 
-export async function scanForFishyWallets(
+export async function scanForExposedWallets(
   contractAddress: string,
   overview: TokenOverview,
   holders: HolderEntry[],
   options: { fullScan?: boolean } = {}
 ): Promise<ExposeScanResult> {
   const normalized = normalizeAddress(contractAddress);
-  const basicFishy = scoreBasicHolders(holders, overview);
+  const basicExposed = scoreBasicHolders(holders, overview);
 
-  let fishyWallets = basicFishy;
+  let exposedWallets = basicExposed;
   let sharedSources: SharedFundSource[] = [];
   let insiderClusterScore = 0;
   let scanDepth: ExposeScanResult["scanDepth"] = "basic";
@@ -171,8 +175,8 @@ export async function scanForFishyWallets(
     );
     sharedSources = fundTrace.sharedSources;
     insiderClusterScore = fundTrace.insiderClusterScore;
-    fishyWallets = mergeFundTraceScores(
-      basicFishy,
+    exposedWallets = mergeFundTraceScores(
+      basicExposed,
       sharedSources,
       fundTrace.entries
     );
@@ -182,15 +186,16 @@ export async function scanForFishyWallets(
   const traders = await fetchTopTraders(
     normalized,
     holders,
-    overview.decimals
+    overview.decimals,
+    overview.priceUsd
   ).catch(() => []);
 
-  const critical = fishyWallets.filter((f) => f.tier === "CRITICAL").length;
-  const high = fishyWallets.filter((f) => f.tier === "HIGH").length;
+  const critical = exposedWallets.filter((f) => f.tier === "CRITICAL").length;
+  const high = exposedWallets.filter((f) => f.tier === "HIGH").length;
   const summary =
-    fishyWallets.length === 0
-      ? "No high-risk wallets flagged from holder distribution."
-      : `Flagged ${fishyWallets.length} wallet(s): ${critical} critical, ${high} high risk.` +
+    exposedWallets.length === 0
+      ? "No suspicious wallets flagged from holder distribution."
+      : `${exposedWallets.length} wallet(s) exposed: ${critical} critical, ${high} high risk.` +
         (sharedSources.length > 0
           ? ` ${sharedSources.length} shared funding cluster(s) detected.`
           : "");
@@ -198,7 +203,7 @@ export async function scanForFishyWallets(
   return {
     contractAddress: normalized,
     tokenSymbol: overview.symbol,
-    fishyWallets,
+    exposedWallets,
     traders,
     sharedSources,
     insiderClusterScore,
@@ -208,3 +213,6 @@ export async function scanForFishyWallets(
     cached: false,
   };
 }
+
+/** @deprecated */
+export const scanForFishyWallets = scanForExposedWallets;

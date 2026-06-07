@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import type { FishyWallet, HolderEntry, TraderEntry } from "@/lib/analyze/types";
+import type { ExposedWallet, HolderEntry, TraderEntry } from "@/lib/analyze/types";
 import { formatUsd, truncateAddress } from "@/lib/ethereum";
 import { elapsedMs, startTimer } from "@/lib/timing";
 import {
@@ -19,9 +19,15 @@ import {
 } from "@/stores/app-store";
 import type { WalletProfile, WalletTrackSnapshot } from "@/lib/analyze/types";
 
-type Tab = "holders" | "traders" | "fishy";
+type Tab = "holders" | "traders" | "exposed";
 
-const TIER_COLOR: Record<FishyWallet["tier"], string> = {
+function formatPercent(value: number): string {
+  if (value >= 0.01) return `${value.toFixed(2)}%`;
+  if (value > 0) return `${value.toFixed(4)}%`;
+  return "0.00%";
+}
+
+const TIER_COLOR: Record<ExposedWallet["tier"], string> = {
   CRITICAL: "var(--danger)",
   HIGH: "var(--warning)",
   MEDIUM: "var(--accent)",
@@ -86,7 +92,7 @@ export function HolderRosterPanel({
     proRequired?: boolean;
   };
 }) {
-  const [tab, setTab] = useState<Tab>("fishy");
+  const [tab, setTab] = useState<Tab>("exposed");
   const [loadingWallet, setLoadingWallet] = useState<string | null>(null);
   const [loadingAction, setLoadingAction] = useState<
     "analyze" | "track" | "network" | "expose" | null
@@ -200,7 +206,7 @@ export function HolderRosterPanel({
     }
   };
 
-  const onExposeOne = async (fishy: FishyWallet) => {
+  const onExposeOne = async (exposed: ExposedWallet) => {
     if (!canAct) {
       setAnalyzeError("Connect Telegram to expose wallets.");
       return;
@@ -209,15 +215,15 @@ export function HolderRosterPanel({
       setAnalyzeError("EXPOSED.OS Pro required for network expose.");
       return;
     }
-    setLoadingWallet(fishy.address);
+    setLoadingWallet(exposed.address);
     setLoadingAction("expose");
     setAnalyzeError(null);
     setActiveProcesses(useAppStore.getState().activeProcesses + 1);
     const start = startTimer();
     try {
-      const result = await fetchWalletNetwork(fishy.address, 90, contractAddress);
-      setNetworkResult(networkResultKey(fishy.address, 90), result);
-      openNetworkPanel(fishy.address, contractAddress, 90);
+      const result = await fetchWalletNetwork(exposed.address, 90, contractAddress);
+      setNetworkResult(networkResultKey(exposed.address, 90), result);
+      openNetworkPanel(exposed.address, contractAddress, 90);
       useAppStore.getState().setLastQueryMs(elapsedMs(start));
     } catch (err) {
       setAnalyzeError(err instanceof Error ? err.message : "Expose failed");
@@ -309,23 +315,32 @@ export function HolderRosterPanel({
     }
   };
 
-  const fishyWallets = exposeScan?.fishyWallets ?? [];
+  const exposedWallets = exposeScan?.exposedWallets ?? [];
   const traders = exposeScan?.traders ?? [];
 
-  const tabBtn = (id: Tab, label: string, count?: number) => (
-    <button
-      type="button"
-      onClick={() => setTab(id)}
-      className={`border px-2 py-1 text-[10px] ${
-        tab === id
-          ? "border-[var(--accent)] bg-[var(--accent)] text-[var(--bg)]"
-          : "border-[var(--border)] text-[var(--text-secondary)] hover:border-[var(--accent)]"
-      }`}
-    >
-      {label}
-      {count != null ? ` (${count})` : ""}
-    </button>
-  );
+  const tabBtn = (id: Tab, label: string, count?: number) => {
+    const isExposed = id === "exposed";
+    const active = tab === id;
+    return (
+      <button
+        type="button"
+        onClick={() => setTab(id)}
+        className={`border px-2 py-1 text-[10px] tracking-wide ${
+          isExposed
+            ? active
+              ? "border-[var(--warning)] bg-[var(--warning)] text-[var(--bg)] shadow-[0_0_14px_rgba(255,184,0,0.4)]"
+              : "border-[var(--warning)]/70 bg-[var(--warning)]/10 text-[var(--warning)] hover:bg-[var(--warning)]/20"
+            : active
+              ? "border-[var(--accent)] bg-[var(--accent)] text-[var(--bg)]"
+              : "border-[var(--border)] text-[var(--text-secondary)] hover:border-[var(--accent)]"
+        }`}
+      >
+        {isExposed ? "★ " : ""}
+        {label}
+        {count != null ? ` (${count})` : ""}
+      </button>
+    );
+  };
 
   return (
     <div className="space-y-3 text-[11px]">
@@ -351,16 +366,16 @@ export function HolderRosterPanel({
 
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex flex-wrap gap-1">
-          {tabBtn("fishy", "FISHY", fishyWallets.length)}
+          {tabBtn("exposed", "EXPOSED", exposedWallets.length)}
           {tabBtn("holders", "TOP HOLDERS", holders.length)}
-          {tabBtn("traders", "TOP TRADERS", traders.length)}
+          {tabBtn("traders", "TOP PNL", traders.length)}
         </div>
         {canAct ? (
           <div className="flex flex-wrap gap-1">
             <button
               type="button"
               onClick={() => void onExposeAll()}
-              disabled={exposingAll || fishyWallets.length === 0}
+              disabled={exposingAll || exposedWallets.length === 0}
               className="border border-[var(--danger)] bg-[var(--danger)] px-2 py-0.5 text-[10px] text-[var(--bg)] hover:opacity-80 disabled:opacity-40"
             >
               {exposingAll ? "EXPOSING..." : "EXPOSE ALL"}
@@ -390,15 +405,15 @@ export function HolderRosterPanel({
         )}
       </div>
 
-      {tab === "fishy" ? (
+      {tab === "exposed" ? (
         <>
           <div className="text-[10px] text-[var(--text-secondary)]">
             {scanLoading
-              ? "SCANNING HOLDERS FOR SUSPICIOUS PATTERNS..."
+              ? "AUTO-EXPOSING SUSPICIOUS WALLETS ON THIS CA..."
               : exposeScan?.summary ?? "Auto-scan runs when you paste a CA."}
             {exposeScan?.scanDepth === "basic" && !isPro ? (
               <span className="ml-2 text-[var(--warning)]">
-                · Basic scan — upgrade for fund-trace depth
+                · Preview scan — Pro unlocks fund-trace depth + EXPOSE ALL
               </span>
             ) : null}
           </div>
@@ -408,66 +423,66 @@ export function HolderRosterPanel({
                 <tr className="border-b border-[var(--border)]">
                   <th className="py-1 pr-2">#</th>
                   <th className="py-1 pr-2">WALLET</th>
-                  <th className="py-1 pr-2 text-right">FISHY</th>
+                  <th className="py-1 pr-2 text-right">SCORE</th>
                   <th className="py-1 pr-2">WHY</th>
                   <th className="py-1 text-right">ACT</th>
                 </tr>
               </thead>
               <tbody>
-                {fishyWallets.length === 0 ? (
+                {exposedWallets.length === 0 ? (
                   <tr>
                     <td colSpan={5} className="py-6 text-center text-[var(--text-secondary)]">
-                      {scanLoading ? "Analyzing..." : "No fishy wallets flagged yet."}
+                      {scanLoading ? "Analyzing..." : "No exposed wallets flagged yet."}
                     </td>
                   </tr>
                 ) : (
-                  fishyWallets.map((fishy, index) => (
+                  exposedWallets.map((exposed, index) => (
                     <tr
-                      key={fishy.address}
-                      className="border-b border-[var(--border)]/50 hover:bg-[var(--bg)]"
+                      key={exposed.address}
+                      className="border-b border-[var(--border)]/50 hover:bg-[var(--warning)]/5"
                     >
                       <td className="py-1.5 pr-2 text-[var(--text-secondary)]">
                         {index + 1}
                       </td>
                       <td className="py-1.5 pr-2">
                         <div className="text-[var(--text-primary)]">
-                          {fishy.label ?? truncateAddress(fishy.address)}
+                          {exposed.label ?? truncateAddress(exposed.address)}
                         </div>
-                        {fishy.holderRank ? (
+                        {exposed.holderRank ? (
                           <div className="text-[9px] text-[var(--text-secondary)]">
-                            holder #{fishy.holderRank}
-                            {fishy.percentOfSupply != null
-                              ? ` · ${fishy.percentOfSupply.toFixed(1)}%`
+                            holder #{exposed.holderRank}
+                            {exposed.percentOfSupply != null
+                              ? ` · ${formatPercent(exposed.percentOfSupply)}`
                               : ""}
                           </div>
                         ) : null}
                       </td>
                       <td className="py-1.5 pr-2 text-right">
-                        <span style={{ color: TIER_COLOR[fishy.tier] }}>
-                          {fishy.fishyScore}
+                        <span style={{ color: TIER_COLOR[exposed.tier] }}>
+                          {exposed.exposeScore}
                         </span>
                         <div
                           className="text-[8px]"
-                          style={{ color: TIER_COLOR[fishy.tier] }}
+                          style={{ color: TIER_COLOR[exposed.tier] }}
                         >
-                          {fishy.tier}
+                          {exposed.tier}
                         </div>
                       </td>
                       <td className="py-1.5 pr-2 text-[9px] text-[var(--text-secondary)]">
-                        {fishy.reasons.slice(0, 2).join(" · ")}
+                        {exposed.reasons.slice(0, 2).join(" · ")}
                       </td>
                       <td className="py-1.5 text-right">
                         <button
                           type="button"
-                          onClick={() => void onExposeOne(fishy)}
+                          onClick={() => void onExposeOne(exposed)}
                           disabled={
                             !canAct ||
-                            (loadingWallet === fishy.address &&
+                            (loadingWallet === exposed.address &&
                               loadingAction === "expose")
                           }
-                          className="border border-[var(--danger)] px-2 py-0.5 text-[10px] text-[var(--danger)] hover:bg-[var(--danger)] hover:text-[var(--bg)] disabled:opacity-40"
+                          className="border border-[var(--warning)] px-2 py-0.5 text-[10px] text-[var(--warning)] hover:bg-[var(--warning)] hover:text-[var(--bg)] disabled:opacity-40"
                         >
-                          {loadingWallet === fishy.address && loadingAction === "expose"
+                          {loadingWallet === exposed.address && loadingAction === "expose"
                             ? "..."
                             : "EXPOSE"}
                         </button>
@@ -520,7 +535,7 @@ export function HolderRosterPanel({
                   </tr>
                 ) : (
                   holders.map((holder) => {
-                    const isFishy = fishyWallets.some(
+                    const isExposed = exposedWallets.some(
                       (f) => f.address.toLowerCase() === holder.address.toLowerCase()
                     );
                     return (
@@ -529,9 +544,9 @@ export function HolderRosterPanel({
                         address={holder.address}
                         label={holder.label}
                         rank={holder.rank}
-                        rightPrimary={`${holder.percentOfSupply.toFixed(2)}%`}
+                        rightPrimary={formatPercent(holder.percentOfSupply)}
                         rightSecondary={formatUsd(holder.usdValue) ?? "—"}
-                        highlight={isFishy}
+                        highlight={isExposed}
                         actions={
                           <div className="flex justify-end gap-1">
                             <button
@@ -573,7 +588,7 @@ export function HolderRosterPanel({
       {tab === "traders" ? (
         <>
           <div className="text-[10px] text-[var(--text-secondary)]">
-            Most active wallets by transfer volume on this token
+            Top wallets by estimated PnL on this token (realized + unrealized)
             {traders.length === 0 && scanLoading ? " · loading..." : ""}
           </div>
           <div className="max-h-[320px] overflow-auto os-scrollbar">
@@ -582,9 +597,9 @@ export function HolderRosterPanel({
                 <tr className="border-b border-[var(--border)]">
                   <th className="py-1 pr-2">#</th>
                   <th className="py-1 pr-2">WALLET</th>
-                  <th className="py-1 pr-2 text-right">TXS</th>
-                  <th className="py-1 pr-2 text-right">VOLUME</th>
-                  <th className="py-1 text-right">NET</th>
+                  <th className="py-1 pr-2 text-right">PNL</th>
+                  <th className="py-1 pr-2 text-right">REALIZED</th>
+                  <th className="py-1 text-right">STATUS</th>
                 </tr>
               </thead>
               <tbody>
@@ -592,8 +607,8 @@ export function HolderRosterPanel({
                   <tr>
                     <td colSpan={5} className="py-6 text-center text-[var(--text-secondary)]">
                       {scanLoading
-                        ? "Pulling trader activity..."
-                        : "No trader data — needs Alchemy or holder tx scan."}
+                        ? "Computing PnL from token transfers..."
+                        : "No PnL data — scan needs transfer history on this CA."}
                     </td>
                   </tr>
                 ) : (
@@ -608,23 +623,20 @@ export function HolderRosterPanel({
                       <td className="py-1.5 pr-2">
                         {trader.label ?? truncateAddress(trader.address)}
                       </td>
-                      <td className="py-1.5 pr-2 text-right">{trader.tradeCount}</td>
-                      <td className="py-1.5 pr-2 text-right text-[var(--text-secondary)]">
-                        {trader.totalVolume.toLocaleString(undefined, {
-                          maximumFractionDigits: 0,
-                        })}
-                      </td>
                       <td
-                        className={`py-1.5 text-right text-[9px] ${
-                          trader.netVolume >= 0
+                        className={`py-1.5 pr-2 text-right font-medium ${
+                          (trader.totalPnlUsd ?? 0) >= 0
                             ? "text-[var(--success)]"
                             : "text-[var(--danger)]"
                         }`}
                       >
-                        {trader.netVolume >= 0 ? "+" : ""}
-                        {trader.netVolume.toLocaleString(undefined, {
-                          maximumFractionDigits: 0,
-                        })}
+                        {formatUsd(trader.totalPnlUsd)}
+                      </td>
+                      <td className="py-1.5 pr-2 text-right text-[var(--text-secondary)]">
+                        {formatUsd(trader.realizedPnlUsd)}
+                      </td>
+                      <td className="py-1.5 text-right text-[9px] text-[var(--text-secondary)]">
+                        {trader.status}
                       </td>
                     </tr>
                   ))
@@ -652,7 +664,7 @@ export function HolderRosterPanel({
                   className="border-b border-[var(--border)]/30 py-1 text-[var(--text-secondary)]"
                 >
                   #{holder.rank} {holder.label ?? truncateAddress(holder.address)} ·{" "}
-                  {holder.percentOfSupply.toFixed(2)}%
+                      {formatPercent(holder.percentOfSupply)}
                 </div>
               ))}
             </div>
@@ -662,7 +674,7 @@ export function HolderRosterPanel({
 
       {guest && !user ? (
         <p className="text-[9px] text-[var(--text-secondary)]">
-          Guest mode: view fishy list. Login + Pro to EXPOSE syndicate networks.
+          Guest mode: preview exposed list. Login + Pro to EXPOSE syndicate networks.
         </p>
       ) : null}
     </div>

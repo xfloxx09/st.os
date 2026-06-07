@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { analyzeContractAddress } from "@/lib/analyze/ca-analyzer";
 import { bulkExposeWallets } from "@/lib/analyze/bulk-expose";
-import { scanForFishyWallets } from "@/lib/analyze/expose-scan";
+import { scanForExposedWallets } from "@/lib/analyze/expose-scan";
 import type { BulkExposeResult } from "@/lib/analyze/types";
 import { hasActiveSubscription } from "@/lib/billing/subscription";
 import { getAuthSession } from "@/lib/auth/session";
@@ -52,23 +52,23 @@ export async function GET(request: NextRequest) {
     try {
       const isPro = await hasActiveSubscription(session.userId);
       const analysis = await analyzeContractAddress(normalized, { isPro });
-      const scan = await scanForFishyWallets(
+      const scan = await scanForExposedWallets(
         normalized,
         analysis.overview,
         analysis.holders,
         { fullScan: true }
       );
 
-      if (scan.fishyWallets.length === 0) {
+      if (scan.exposedWallets.length === 0) {
         return NextResponse.json(
-          { error: "No fishy wallets flagged for this token." },
+          { error: "No exposed wallets flagged for this token." },
           { status: 404 }
         );
       }
 
       result = await bulkExposeWallets(
         normalized,
-        scan.fishyWallets,
+        scan.exposedWallets,
         windowDays
       );
       await setCachedWalletData(cacheKey, "bulk_expose", result);

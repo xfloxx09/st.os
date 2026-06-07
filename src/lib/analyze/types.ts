@@ -258,33 +258,34 @@ export interface TraderEntry {
   rank: number;
   address: string;
   label: string | null;
-  buyCount: number;
-  sellCount: number;
-  transferInCount: number;
-  transferOutCount: number;
-  totalVolume: number;
-  netVolume: number;
+  position: number;
+  realizedPnlUsd: number | null;
+  unrealizedPnlUsd: number | null;
+  totalPnlUsd: number | null;
+  pnlPercent: number | null;
   tradeCount: number;
-  firstTradeAt: string | null;
-  lastTradeAt: string | null;
+  status: "OPEN" | "EXITED" | "AIRDROP" | "UNKNOWN";
 }
 
-export interface FishyWallet {
+export interface ExposedWallet {
   address: string;
   label: string | null;
   holderRank: number | null;
   percentOfSupply: number | null;
-  fishyScore: number;
+  exposeScore: number;
   tier: "CRITICAL" | "HIGH" | "MEDIUM" | "LOW";
   reasons: string[];
   flags: string[];
   sharedFundWith: string[];
 }
 
+/** @deprecated use ExposedWallet */
+export type FishyWallet = ExposedWallet;
+
 export interface ExposeScanResult {
   contractAddress: string;
   tokenSymbol: string | null;
-  fishyWallets: FishyWallet[];
+  exposedWallets: ExposedWallet[];
   traders: TraderEntry[];
   sharedSources: SharedFundSource[];
   insiderClusterScore: number;
@@ -297,7 +298,7 @@ export interface ExposeScanResult {
 export interface BulkExposeEntry {
   walletAddress: string;
   label: string | null;
-  fishyScore: number;
+  exposeScore: number;
   network: WalletNetworkResult | null;
   error?: string;
 }
