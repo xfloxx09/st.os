@@ -7,11 +7,13 @@ export interface HolderFetchResult {
   holders: RawHolder[];
   source: HolderSource;
   warning?: string;
+  proRequired?: boolean;
 }
 
 export async function fetchTopHolders(
   contractAddress: string,
-  limit = 100
+  limit = 100,
+  options?: { isPro?: boolean }
 ): Promise<HolderFetchResult> {
   try {
     const etherscan = await fetchTokenHolders(contractAddress, 1, limit);
@@ -44,8 +46,11 @@ export async function fetchTopHolders(
     return {
       source: "blockscout",
       holders: blockscout,
+      proRequired: isProOnly,
       warning: isProOnly
-        ? "Holder list via Blockscout (Etherscan Pro endpoint not available on free tier)"
+        ? options?.isPro
+          ? "Etherscan Pro API key required on server — contact support"
+          : "Free tier: Blockscout holders. Upgrade to CA.OS Pro for direct Etherscan pipeline + unlimited STALK."
         : undefined,
     };
   }

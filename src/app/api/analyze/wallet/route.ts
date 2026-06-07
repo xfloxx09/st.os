@@ -21,8 +21,16 @@ export async function GET(request: NextRequest) {
 
   if (session.type === "guest") {
     return NextResponse.json(
-      { error: "Connect Telegram to STALK wallets." },
+      { error: "Connect Telegram to analyze wallets." },
       { status: 403 }
+    );
+  }
+
+  const { hasActiveSubscription } = await import("@/lib/billing/subscription");
+  if (!(await hasActiveSubscription(session.userId))) {
+    return NextResponse.json(
+      { error: "CA.OS Pro required for wallet deep-dive. See /pricing" },
+      { status: 402 }
     );
   }
 

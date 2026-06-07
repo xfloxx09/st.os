@@ -10,11 +10,11 @@ const ibmPlexMono = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "STALKER.OS — On-Chain Intelligence Terminal",
+  title: "CA.OS — Contract Address Intelligence Terminal",
   description:
-    "Browser-based Ethereum token forensics terminal. Paste a contract address. Stalk the holders.",
+    "Browser-based Ethereum token forensics terminal. Paste a contract address. Analyze the holders.",
   openGraph: {
-    title: "STALKER.OS",
+    title: "CA.OS",
     description: "On-chain intelligence terminal for Ethereum tokens",
     type: "website",
   },

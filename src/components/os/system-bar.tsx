@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { TelegramLogin } from "@/components/auth/telegram-login";
 import { useAppStore } from "@/stores/app-store";
 
@@ -29,7 +30,10 @@ export function SystemBar() {
         >
           [::]
         </button>
-        <span className="tracking-[0.25em] text-[var(--accent)]">STALKER.OS</span>
+        <span className="tracking-[0.25em] text-[var(--accent)]">CA.OS</span>
+        <Link href="/pricing" className="text-[10px] text-[var(--text-secondary)] hover:text-[var(--accent)]">
+          PRO
+        </Link>
       </div>
 
       <div className="flex items-center gap-6 text-[var(--text-secondary)]">

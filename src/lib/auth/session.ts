@@ -7,7 +7,8 @@ import {
   guestSearchesRemaining,
 } from "@/lib/auth/guest";
 
-export const SESSION_COOKIE = "stalker_session";
+export const SESSION_COOKIE = "ca_session";
+export const LEGACY_SESSION_COOKIE = "stalker_session";
 const SESSION_DAYS = 30;
 
 function getSecret() {
@@ -117,7 +118,9 @@ export async function verifyAuthToken(token: string): Promise<AuthSession | null
 
 export async function getAuthSession(): Promise<AuthSession | null> {
   const cookieStore = await cookies();
-  const token = cookieStore.get(SESSION_COOKIE)?.value;
+  const token =
+    cookieStore.get(SESSION_COOKIE)?.value ??
+    cookieStore.get(LEGACY_SESSION_COOKIE)?.value;
   if (!token) return null;
   return verifyAuthToken(token);
 }

@@ -10,6 +10,7 @@ import {
 import { isValidEthAddress, normalizeAddress } from "@/lib/ethereum";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { getSearchHistory, recordSearch } from "@/lib/search-history";
+import { hasActiveSubscription } from "@/lib/billing/subscription";
 
 export async function GET(request: NextRequest) {
   const session = await getAuthSession();
@@ -59,9 +60,12 @@ export async function GET(request: NextRequest) {
     }
   }
 
+  const isPro =
+    session.type === "user" && (await hasActiveSubscription(session.userId));
+
   if (!result) {
     try {
-      result = await analyzeContractAddress(normalized);
+      result = await analyzeContractAddress(normalized, { isPro });
       await setCachedWalletData(normalized, "ca_analysis", result);
     } catch (err) {
       const message =

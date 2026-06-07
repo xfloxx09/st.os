@@ -8,6 +8,8 @@ export interface Database {
   rate_limits: RateLimitsTable;
   schema_migrations: SchemaMigrationsTable;
   guest_sessions: GuestSessionsTable;
+  app_settings: AppSettingsTable;
+  subscriptions: SubscriptionsTable;
 }
 
 export interface UsersTable {
@@ -16,6 +18,8 @@ export interface UsersTable {
   telegram_username: string | null;
   telegram_first_name: string | null;
   plan: Generated<string>;
+  role: Generated<string>;
+  wallet_address: string | null;
   created_at: Generated<Date>;
   last_active: Generated<Date>;
 }
@@ -65,6 +69,26 @@ export interface GuestSessionsTable {
   search_count: Generated<number>;
   created_at: Generated<Date>;
   expires_at: Date;
+}
+
+export interface AppSettingsTable {
+  key: string;
+  value: unknown;
+  updated_at: Generated<Date>;
+}
+
+export interface SubscriptionsTable {
+  id: Generated<number>;
+  user_id: number;
+  plan: string;
+  payment_method: string;
+  status: Generated<string>;
+  tx_hash: string | null;
+  wallet_address: string | null;
+  amount_paid: string | null;
+  starts_at: Date;
+  expires_at: Date;
+  created_at: Generated<Date>;
 }
 
 export type User = Selectable<UsersTable>;

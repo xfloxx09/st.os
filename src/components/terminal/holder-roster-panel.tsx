@@ -8,6 +8,7 @@ import {
   useAppStore,
   walletProfileKey,
 } from "@/stores/app-store";
+import Link from "next/link";
 import type { WalletProfile } from "@/lib/analyze/types";
 
 export function HolderRosterPanel({
@@ -25,6 +26,7 @@ export function HolderRosterPanel({
     analyzable: number;
     filtered: number;
     warning?: string;
+    proRequired?: boolean;
   };
 }) {
   const [loadingWallet, setLoadingWallet] = useState<string | null>(null);
@@ -76,6 +78,25 @@ export function HolderRosterPanel({
 
   return (
     <div className="space-y-3 text-[11px]">
+      {holdersMeta?.proRequired ? (
+        <div className="border border-[var(--warning)] bg-[var(--bg)] p-3 text-[10px]">
+          <p className="text-[var(--warning)]">
+            FREE TIER: Blockscout holder data. Etherscan direct pipeline requires{" "}
+            <a
+              href="https://docs.etherscan.io/resources/pro-endpoints"
+              className="underline"
+              target="_blank"
+              rel="noreferrer"
+            >
+              Etherscan API Pro
+            </a>{" "}
+            (server) + CA.OS Pro (you).
+          </p>
+          <Link href="/pricing" className="mt-2 inline-block text-[var(--accent)] underline">
+            Upgrade to CA.OS Pro →
+          </Link>
+        </div>
+      ) : null}
       <div className="flex items-center justify-between text-[10px] text-[var(--text-secondary)]">
         <span>
           {holders.length} ANALYZABLE HOLDERS

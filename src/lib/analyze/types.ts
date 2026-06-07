@@ -39,6 +39,7 @@ export interface HoldersMeta {
   analyzable: number;
   filtered: number;
   warning?: string;
+  proRequired?: boolean;
 }
 
 export interface CaAnalysisResult {

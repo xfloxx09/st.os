@@ -8,7 +8,7 @@ const port = process.env.PORT ?? "3000";
 const root = dirname(fileURLToPath(import.meta.url));
 const nextBin = join(root, "..", "node_modules", "next", "dist", "bin", "next");
 
-console.log(`[stalker.os] starting next on ${host}:${port}`);
+console.log(`[ca.os] starting next on ${host}:${port}`);
 
 const child = spawn(process.execPath, [nextBin, "start", "-H", host, "-p", port], {
   stdio: "inherit",

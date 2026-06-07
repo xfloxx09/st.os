@@ -6,6 +6,7 @@ import {
 } from "@/lib/auth/session";
 import { getDb } from "@/lib/db";
 import { getSearchHistory } from "@/lib/search-history";
+import { hasActiveSubscription, isAdmin } from "@/lib/billing/subscription";
 
 export async function GET() {
   const session = await getAuthSession();
@@ -27,6 +28,8 @@ export async function GET() {
   }
 
   const history = await getSearchHistory(session.userId);
+  const pro = await hasActiveSubscription(session.userId);
+  const admin = await isAdmin(session.userId);
 
   return NextResponse.json({
     authenticated: true,
@@ -35,6 +38,8 @@ export async function GET() {
       telegramId: session.telegramId,
       username: session.username,
       firstName: session.firstName,
+      isPro: pro,
+      isAdmin: admin,
     },
     searchHistory: history.map((row) => ({
       id: row.id,
