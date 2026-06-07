@@ -3,6 +3,9 @@
 import { useEffect, useRef } from "react";
 import { OsWindow } from "@/components/os/os-window";
 import { TelegramLogin } from "@/components/auth/telegram-login";
+import { CaInput } from "@/components/terminal/ca-input";
+import { TokenOverviewPanel } from "@/components/terminal/token-overview-panel";
+import { HolderRosterPanel } from "@/components/terminal/holder-roster-panel";
 import { useAppStore } from "@/stores/app-store";
 
 const BOT_USERNAME = process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME ?? "";
@@ -10,34 +13,20 @@ const BOT_USERNAME = process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME ?? "";
 export function Workspace() {
   const user = useAppStore((s) => s.user);
   const panels = useAppStore((s) => s.panels);
-  const addPanel = useAppStore((s) => s.addPanel);
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    if (!user) return;
-
-    const hasWelcome = panels.some((p) => p.id === "welcome");
-    if (!hasWelcome) {
-      addPanel({
-        id: "welcome",
-        type: "TOKEN_OVERVIEW",
-        title: "TERMINAL.EXE",
-        x: 48,
-        y: 48,
-        width: 520,
-        height: 280,
-      });
-    }
-  }, [user, panels, addPanel]);
+  const analysisByContract = useAppStore((s) => s.analysisByContract);
+  const analyzeError = useAppStore((s) => s.analyzeError);
+  const inputContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
-        inputRef.current?.focus();
+        const input = inputContainerRef.current?.querySelector("input");
+        input?.focus();
       }
       if (e.key === "Escape") {
-        inputRef.current?.blur();
+        const input = inputContainerRef.current?.querySelector("input");
+        if (input === document.activeElement) input?.blur();
       }
     };
     window.addEventListener("keydown", onKeyDown);
@@ -68,45 +57,53 @@ export function Workspace() {
         </div>
       ) : (
         <>
-          <div className="absolute left-4 right-4 top-4 z-10 mx-auto max-w-3xl">
-            <label className="block text-[10px] tracking-[0.2em] text-[var(--text-secondary)]">
-              CONTRACT ADDRESS INPUT
-            </label>
-            <input
-              ref={inputRef}
-              type="text"
-              placeholder="0x... paste token contract address (Phase 1)"
-              disabled
-              className="mt-1 w-full border border-[var(--border)] bg-[var(--bg-panel)] px-3 py-2 text-sm text-[var(--text-primary)] outline-none placeholder:text-[var(--text-secondary)] focus:border-[var(--accent)]"
-            />
-            <p className="mt-1 text-[10px] text-[var(--text-secondary)]">
-              Ctrl+K to focus · Analysis pipeline ships in Phase 1
-            </p>
+          <div
+            ref={inputContainerRef}
+            className="absolute left-4 right-4 top-4 z-10 px-2"
+          >
+            <CaInput />
+            {analyzeError ? (
+              <p className="mt-2 text-[11px] text-[var(--danger)]">
+                SIGNAL LOST — {analyzeError}
+              </p>
+            ) : null}
           </div>
 
-          {panels.map((panel) => (
-            <OsWindow key={panel.id} {...panel}>
-              {panel.id === "welcome" ? (
-                <div className="space-y-3 text-[var(--text-secondary)]">
-                  <p className="text-[var(--text-primary)]">
-                    STALKER.OS terminal online.
+          {panels.map((panel) => {
+            const analysis = panel.contractAddress
+              ? analysisByContract[panel.contractAddress]
+              : null;
+
+            return (
+              <OsWindow key={panel.id} {...panel}>
+                {panel.type === "TOKEN_OVERVIEW" && analysis ? (
+                  <TokenOverviewPanel
+                    overview={analysis.overview}
+                    cached={analysis.cached}
+                  />
+                ) : panel.type === "HOLDER_ROSTER" && analysis ? (
+                  <HolderRosterPanel
+                    holders={analysis.holders}
+                    allHolders={analysis.allHolders}
+                  />
+                ) : panel.id === "welcome" ? (
+                  <div className="space-y-3 text-[var(--text-secondary)]">
+                    <p className="text-[var(--text-primary)]">
+                      STALKER.OS terminal online.
+                    </p>
+                    <p>
+                      Paste a contract address above to load token overview and
+                      holder roster.
+                    </p>
+                  </div>
+                ) : (
+                  <p className="scan-line text-[var(--text-secondary)]">
+                    AWAITING DATA STREAM...
                   </p>
-                  <p>
-                    Phase 0 complete. Paste a contract address in Phase 1 to load
-                    token overview and holder roster.
-                  </p>
-                  <ul className="space-y-1 text-[11px]">
-                    <li>TOKEN_OVERVIEW.exe — token metadata + risk flags</li>
-                    <li>HOLDER_ROSTER.exe — top holders, STALK on demand</li>
-                    <li>WALLET_PROFILE.exe — fund origin, trades, PNL</li>
-                    <li>CROSS_ANALYSIS.exe — holder relationship engine</li>
-                  </ul>
-                </div>
-              ) : (
-                <p className="text-[var(--text-secondary)]">Panel loading...</p>
-              )}
-            </OsWindow>
-          ))}
+                )}
+              </OsWindow>
+            );
+          })}
         </>
       )}
     </main>

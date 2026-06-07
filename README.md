@@ -54,14 +54,28 @@ Open [http://localhost:3000](http://localhost:3000).
 | `phase/0-foundation` | Phase 0 — auth + OS shell |
 | `phase/1-core-pipeline` | CA input, holders (next) |
 
-## Phase 0 status
+## Phase status
 
+**Phase 0 (complete)**
 - Telegram login + JWT sessions
 - PostgreSQL schema (5 tables + cache layer)
 - STALKER.OS terminal UI shell
 - Railway Docker deployment
 
-**Not yet implemented:** Etherscan, Alchemy, holder analysis, cross-holder engine (Phases 1–3).
+**Phase 1 (complete)**
+- CA input + Etherscan token metadata + holder list
+- DexScreener price/liquidity/volume
+- Honeypot.is risk flags
+- Known wallet label filtering (CEX/DEX/bridges/burn)
+- Token Overview + Holder Roster panels
+- Search history (max 20, clickable sidebar)
+- TTL caching + rate limits on `/api/analyze/ca`
+
+**Not yet implemented:** Wallet STALK deep dive, cross-holder engine (Phases 2–3).
+
+### Phase 1 env vars
+
+Add `ETHERSCAN_API_KEY` to Railway and `.env` (free tier works for launch).
 
 ## License
 

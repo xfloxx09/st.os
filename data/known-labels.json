@@ -1,10 +1,40 @@
 {
-  "cex": {},
-  "bridges": {},
-  "mixers": {},
-  "dex": {},
+  "cex": {
+    "0x28c6c06298d514db089934071355e5743bf21d60": "Binance Hot Wallet",
+    "0x21a31ee1afc51d94c2efccaa2092ad1028285549": "Binance Hot Wallet 2",
+    "0xdfd5293d8e347dfe59e90efd55b2956a1343963d": "Binance Hot Wallet 3",
+    "0x56eddb7aa87536c09ccc2793473599fd21a80b55": "Coinbase Hot Wallet",
+    "0x71660c4005ba85c37ccec55d0bc3a3cc5c311443": "Coinbase Hot Wallet 2",
+    "0x503828976d22510aad0201ac7ec88293211d23da": "Coinbase Hot Wallet 3",
+    "0xddfabcdc4d8ffc6d5be1fcb424438cf4e0a05fe0": "Kraken Hot Wallet",
+    "0x267be1c1d684f78cb4f6a176c4911b741e4ffdc0": "Kraken Hot Wallet 2",
+    "0xf89d543b2400f8dfaf7a621d3904f55e40e9d72b": "OKX Hot Wallet",
+    "0x2c8fbb630289363ac80708a1a41de6bd71051d13": "Bybit Hot Wallet"
+  },
+  "bridges": {
+    "0x8315177ab297ba92a06054ce5a19594c4969fb3b": "Arbitrum Bridge",
+    "0x99c9fc46f92e8a1c0dec1b1747d010903e884be1": "Optimism Gateway",
+    "0x8484ef722627bf18ca5ae6cc021747e0891db384": "Polygon Bridge"
+  },
+  "mixers": {
+    "0x12d66f87a04a099e022dfae9ee2fd446d2a2b159": "Tornado Cash 0.1 ETH",
+    "0x47ce0c6ed5b0ce3d3a771fdbef5237997d0a8f64": "Tornado Cash 1 ETH",
+    "0x910cbd523d972eb0a6f4cae4618ad62622b39dbf": "Tornado Cash 10 ETH",
+    "0xa160cdab225685daec9f48368bad6784e2649105": "Tornado Cash 100 ETH"
+  },
+  "dex": {
+    "0x7a250d5630b4cf539739df2c5dacb4c659f2488d": "Uniswap V2 Router",
+    "0xe592427a0aece92de3edee1f18e0157c05861564": "Uniswap V3 Router",
+    "0x68b3465833fb72a70dcdf3261afbc9c5f083d996": "Uniswap V3 Router 2",
+    "0x3fc91a3afd70395cd496c647d0a4627bb775b43b": "Uniswap Universal Router",
+    "0x1111111254eeb25477b68fb85ed929f73a960582": "1inch Router V5",
+    "0xdef1c0ded9bec7f1a1670819833240f027b25eff": "0x Exchange Proxy",
+    "0xba12222222228d8ba445958a75a0704d566bf2c8": "Balancer Vault",
+    "0x000000000022d473030f116ddee9f6b43ac78ba3": "Uniswap Permit2"
+  },
   "burn": [
+    "0x0000000000000000000000000000000000000000",
     "0x000000000000000000000000000000000000dead",
-    "0x0000000000000000000000000000000000000000"
+    "0x0000000000000000000000000000000000000001"
   ]
 }
