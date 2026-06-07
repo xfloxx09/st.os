@@ -3,7 +3,12 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import type { ProTrackWallet } from "@/lib/analyze/types";
-import { formatPnlValue, truncateAddress } from "@/lib/ethereum";
+import {
+  formatPnlValue,
+  formatTokenAmount,
+  formatUsd,
+  truncateAddress,
+} from "@/lib/ethereum";
 import { PnlCurrencyToggle } from "@/components/terminal/pnl-currency-toggle";
 import { TokenTradeChart } from "@/components/terminal/token-trade-chart";
 import { fetchProAlphaScan } from "@/lib/terminal/phase-actions";
@@ -36,8 +41,27 @@ function pnlCell(
 ): string {
   const v = snap.totalPnlUsd;
   if (v == null) return "--";
-  const formatted = formatPnlValue(v, currency, ethPrice);
-  return formatted;
+  return formatPnlValue(v, currency, ethPrice);
+}
+
+function holdCell(
+  snap: { position: number; positionUsd: number | null },
+  currency: "eth" | "usd",
+  ethPrice: number | null
+): string {
+  if (snap.position <= 0) return "—";
+  if (currency === "usd") {
+    return snap.positionUsd != null ? formatUsd(snap.positionUsd) : "—";
+  }
+  if (snap.positionUsd != null && ethPrice != null && ethPrice > 0) {
+    return formatPnlValue(snap.positionUsd, "eth", ethPrice);
+  }
+  return formatTokenAmount(snap.position);
+}
+
+function pnlColor(value: number | null): string {
+  if (value == null) return "text-[var(--text-secondary)]";
+  return value >= 0 ? "text-[var(--success)]" : "text-[var(--danger)]";
 }
 
 export function ProTrackPanel({
@@ -93,9 +117,9 @@ export function ProTrackPanel({
       <div className="border border-[var(--warning)]/60 bg-[var(--warning)]/5 p-4 text-[10px]">
         <p className="text-[var(--warning)]">★ PRO TRACK — golden feature</p>
         <p className="mt-2 text-[var(--text-secondary)]">
-          Degen-mode wallet ranking — 30m copy-trade window, snipe timing, PnL
-          (day/week/month), intel score, and strategy labels with buy/sell chart
-          markers.
+          Degen-mode wallet ranking — 30m copy-trade window, snipe timing,
+          holdings + unrealized/realized PnL (day/week/month), intel score, and
+          strategy labels with buy/sell chart markers.
         </p>
         <Link href="/pricing" className="mt-3 inline-block text-[var(--accent)] underline">
           Upgrade to EXPOSED.OS Pro →
@@ -171,6 +195,33 @@ export function ProTrackPanel({
               ? ` · ${selectedWallet.minsAfterFirstBuyer}m from first buyer`
               : ""}
           </p>
+          <p className="mt-1 text-[9px] text-[var(--text-secondary)]">
+            Hold {formatTokenAmount(selectedWallet.pnlCurrent.position)}
+            {selectedWallet.pnlCurrent.positionUsd != null
+              ? ` (${formatUsd(selectedWallet.pnlCurrent.positionUsd)})`
+              : ""}
+            {" · "}
+            Realized{" "}
+            {formatPnlValue(
+              selectedWallet.pnlCurrent.realizedPnlUsd,
+              pnlCurrency,
+              ethPriceUsd
+            )}
+            {" · "}
+            Unrealized{" "}
+            {formatPnlValue(
+              selectedWallet.pnlCurrent.unrealizedPnlUsd,
+              pnlCurrency,
+              ethPriceUsd
+            )}
+            {" · "}
+            Total{" "}
+            {formatPnlValue(
+              selectedWallet.pnlCurrent.totalPnlUsd,
+              pnlCurrency,
+              ethPriceUsd
+            )}
+          </p>
           {selectedWallet.trackReasons.length > 0 ? (
             <ul className="mt-1 list-inside list-disc text-[9px] text-[var(--text-secondary)]">
               {selectedWallet.trackReasons.map((r) => (
@@ -206,6 +257,8 @@ export function ProTrackPanel({
               <th className="py-1 pr-2">WALLET</th>
               <th className="py-1 pr-2">STRATEGY</th>
               <th className="py-1 pr-2 text-right">INTEL</th>
+              <th className="py-1 pr-2 text-right">HOLD</th>
+              <th className="py-1 pr-2 text-right">TOTAL</th>
               <th className="py-1 pr-2 text-right">1D</th>
               <th className="py-1 pr-2 text-right">7D</th>
               <th className="py-1 pr-2 text-right">30D</th>
@@ -239,30 +292,37 @@ export function ProTrackPanel({
                   <td className="py-1.5 pr-2 text-right text-[var(--warning)]">
                     {w.intelScore}
                   </td>
+                  <td className="py-1.5 pr-2 text-right text-[var(--text-primary)]">
+                    {holdCell(w.pnlCurrent, pnlCurrency, ethPriceUsd)}
+                  </td>
                   <td
-                    className={`py-1.5 pr-2 text-right ${
-                      (w.pnlDay.totalPnlUsd ?? 0) >= 0
-                        ? "text-[var(--success)]"
-                        : "text-[var(--danger)]"
-                    }`}
+                    className={`py-1.5 pr-2 text-right ${pnlColor(
+                      w.pnlCurrent.totalPnlUsd
+                    )}`}
+                  >
+                    {pnlCell(w.pnlCurrent, pnlCurrency, ethPriceUsd)}
+                  </td>
+                  <td
+                    className={`py-1.5 pr-2 text-right ${pnlColor(
+                      w.pnlDay.totalPnlUsd
+                    )}`}
+                    title="Window realized + current unrealized"
                   >
                     {pnlCell(w.pnlDay, pnlCurrency, ethPriceUsd)}
                   </td>
                   <td
-                    className={`py-1.5 pr-2 text-right ${
-                      (w.pnlWeek.totalPnlUsd ?? 0) >= 0
-                        ? "text-[var(--success)]"
-                        : "text-[var(--danger)]"
-                    }`}
+                    className={`py-1.5 pr-2 text-right ${pnlColor(
+                      w.pnlWeek.totalPnlUsd
+                    )}`}
+                    title="Window realized + current unrealized"
                   >
                     {pnlCell(w.pnlWeek, pnlCurrency, ethPriceUsd)}
                   </td>
                   <td
-                    className={`py-1.5 pr-2 text-right ${
-                      (w.pnlMonth.totalPnlUsd ?? 0) >= 0
-                        ? "text-[var(--success)]"
-                        : "text-[var(--danger)]"
-                    }`}
+                    className={`py-1.5 pr-2 text-right ${pnlColor(
+                      w.pnlMonth.totalPnlUsd
+                    )}`}
+                    title="Window realized + current unrealized"
                   >
                     {pnlCell(w.pnlMonth, pnlCurrency, ethPriceUsd)}
                   </td>
@@ -278,7 +338,7 @@ export function ProTrackPanel({
 
       {loading && wallets.length === 0 ? (
         <p className="scan-line text-[10px] text-[var(--warning)]">
-          SCANNING DEGEN ALPHA · 30M COPY WINDOW · PNL · SNIPER INTEL...
+          SCANNING DEGEN ALPHA · BALANCES · UNREALIZED PNL · SNIPER INTEL...
         </p>
       ) : null}
     </div>

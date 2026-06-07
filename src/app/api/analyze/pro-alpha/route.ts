@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
   }
 
   const normalized = normalizeAddress(contract);
-  const cacheKey = `${normalized}|pro_alpha|v2`;
+  const cacheKey = `${normalized}|pro_alpha|v3`;
   const skipCache = request.nextUrl.searchParams.get("refresh") === "1";
 
   if (!skipCache) {

@@ -330,7 +330,11 @@ export type WalletStrategy =
   | "UNKNOWN";
 
 export interface WindowPnlSnapshot {
+  realizedPnlUsd: number | null;
+  unrealizedPnlUsd: number | null;
   totalPnlUsd: number | null;
+  position: number;
+  positionUsd: number | null;
   tradeCount: number;
   status: TraderEntry["status"];
 }
@@ -363,6 +367,7 @@ export interface ProTrackWallet {
   minsAfterFirstBuyer: number | null;
   minsBehindLeader: number | null;
   buyRank: number | null;
+  pnlCurrent: WindowPnlSnapshot;
   pnlDay: WindowPnlSnapshot;
   pnlWeek: WindowPnlSnapshot;
   pnlMonth: WindowPnlSnapshot;

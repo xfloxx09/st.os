@@ -3,7 +3,10 @@ import {
   buildFirstBuyMap,
   firstBuyMetaForWallet,
 } from "@/lib/analyze/first-mover";
-import { calculateWalletTokenPnl } from "@/lib/analyze/token-pnl";
+import {
+  calculateWalletTokenPnl,
+  type TokenPnlResult,
+} from "@/lib/analyze/token-pnl";
 import type {
   HolderEntry,
   ProAlphaScanResult,
@@ -29,25 +32,103 @@ function sinceMs(days: number): number {
   return Date.now() - days * 24 * 60 * 60 * 1000;
 }
 
+function holderBalanceTokens(holder: HolderEntry | undefined): number | null {
+  if (!holder?.balance) return null;
+  const parsed = Number(holder.balance);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+}
+
+function effectivePosition(
+  full: TokenPnlResult,
+  holder: HolderEntry | undefined,
+  priceUsd: number | null
+): { position: number; positionUsd: number | null } {
+  const holderBal = holderBalanceTokens(holder);
+  if (holderBal != null && holderBal > full.position * 1.02) {
+    return {
+      position: holderBal,
+      positionUsd:
+        holder?.usdValue ??
+        (priceUsd != null ? holderBal * priceUsd : null),
+    };
+  }
+  return {
+    position: full.position,
+    positionUsd:
+      priceUsd != null && full.position > 0
+        ? full.position * priceUsd
+        : null,
+  };
+}
+
+function scaledUnrealized(
+  full: TokenPnlResult,
+  position: number,
+  priceUsd: number | null
+): number | null {
+  if (priceUsd == null || position <= 0) return null;
+  if (full.position > 0 && full.unrealizedPnlUsd != null) {
+    const avgCost =
+      (full.position * priceUsd - full.unrealizedPnlUsd) / full.position;
+    return position * priceUsd - avgCost * position;
+  }
+  return position * priceUsd;
+}
+
+function toPnlSnapshot(
+  full: TokenPnlResult,
+  holder: HolderEntry | undefined,
+  priceUsd: number | null,
+  windowRealized: TokenPnlResult | null
+): WindowPnlSnapshot {
+  const { position, positionUsd } = effectivePosition(full, holder, priceUsd);
+  const unrealizedPnlUsd = scaledUnrealized(full, position, priceUsd);
+  const realizedPnlUsd =
+    windowRealized?.realizedPnlUsd ?? full.realizedPnlUsd;
+  const totalPnlUsd =
+    priceUsd != null && realizedPnlUsd != null
+      ? realizedPnlUsd + (unrealizedPnlUsd ?? 0)
+      : full.totalPnlUsd;
+
+  return {
+    realizedPnlUsd,
+    unrealizedPnlUsd,
+    totalPnlUsd,
+    position,
+    positionUsd,
+    tradeCount: windowRealized?.tradeCount ?? full.tradeCount,
+    status: position > 0 ? "OPEN" : full.status,
+  };
+}
+
 function windowPnl(
   txs: Awaited<ReturnType<typeof fetchTokenTransactions>>,
   wallet: string,
   decimals: number,
   priceUsd: number | null,
+  holder: HolderEntry | undefined,
   days: number
 ): WindowPnlSnapshot {
-  const pnl = calculateWalletTokenPnl(
+  const full = calculateWalletTokenPnl(txs, wallet, decimals, priceUsd, null);
+  const window = calculateWalletTokenPnl(
     txs,
     wallet,
     decimals,
     priceUsd,
     sinceMs(days)
   );
-  return {
-    totalPnlUsd: pnl.totalPnlUsd,
-    tradeCount: pnl.tradeCount,
-    status: pnl.status,
-  };
+  return toPnlSnapshot(full, holder, priceUsd, window);
+}
+
+function currentPnl(
+  txs: Awaited<ReturnType<typeof fetchTokenTransactions>>,
+  wallet: string,
+  decimals: number,
+  priceUsd: number | null,
+  holder: HolderEntry | undefined
+): WindowPnlSnapshot {
+  const full = calculateWalletTokenPnl(txs, wallet, decimals, priceUsd, null);
+  return toPnlSnapshot(full, holder, priceUsd, null);
 }
 
 function tradeMarkers(
@@ -94,29 +175,50 @@ function classifyTrades(
 
 function intelScore(
   firstMover: number,
-  monthPnl: number | null,
+  totalPnl: number | null,
+  unrealizedPnl: number | null,
+  positionUsd: number | null,
   followers30m: number,
   holderRank: number | null
 ): number {
   let score = 40;
   score += Math.min(35, firstMover * 0.35);
   score += Math.min(30, followers30m * 10);
-  if (monthPnl != null && monthPnl > 0) score += Math.min(15, monthPnl / 500);
+  if (totalPnl != null && totalPnl > 0) score += Math.min(12, totalPnl / 500);
+  if (unrealizedPnl != null && unrealizedPnl > 0) {
+    score += Math.min(10, unrealizedPnl / 750);
+  }
+  if (positionUsd != null && positionUsd > 0) {
+    score += Math.min(8, positionUsd / 2000);
+  }
   if (holderRank != null && holderRank <= 10) score += 8;
   return Math.min(100, Math.round(score));
 }
 
 function trackScore(
   intel: number,
-  monthPnl: number | null,
+  totalPnl: number | null,
+  unrealizedPnl: number | null,
+  positionUsd: number | null,
   firstMover: number,
   followers30m: number
 ): number {
   const pnlPart =
-    monthPnl == null ? 0 : Math.min(30, Math.max(-10, monthPnl / 200));
+    totalPnl == null ? 0 : Math.min(25, Math.max(-10, totalPnl / 200));
+  const unrealizedPart =
+    unrealizedPnl == null ? 0 : Math.min(12, Math.max(0, unrealizedPnl / 400));
+  const bagPart =
+    positionUsd == null ? 0 : Math.min(12, positionUsd / 1500);
   return Math.min(
     100,
-    Math.round(intel * 0.45 + firstMover * 0.25 + followers30m * 4 + pnlPart)
+    Math.round(
+      intel * 0.38 +
+        firstMover * 0.22 +
+        followers30m * 4 +
+        pnlPart +
+        unrealizedPart +
+        bagPart
+    )
   );
 }
 
@@ -204,23 +306,32 @@ export async function scanProAlphaTargets(
         const holder = holderByAddress(holders, wallet);
         const firstBuy = firstBuyMetaForWallet(wallet, firstBuyMap);
         const trades = classifyTrades(txs, wallet, txDecimals, priceUsd);
-        const monthPnl = calculateWalletTokenPnl(
+        const fullPnl = calculateWalletTokenPnl(
           txs,
           wallet,
           txDecimals,
           priceUsd,
-          sinceMs(30)
+          null
+        );
+        const pnlCurrent = currentPnl(
+          txs,
+          wallet,
+          txDecimals,
+          priceUsd,
+          holder
         );
         const { preferredWindow } = tradingHoursProfile(trades);
         const intel = intelScore(
           firstBuy?.firstMoverScore ?? 0,
-          monthPnl.totalPnlUsd,
+          pnlCurrent.totalPnlUsd,
+          pnlCurrent.unrealizedPnlUsd,
+          pnlCurrent.positionUsd,
           firstBuy?.followers30m ?? 0,
           holder?.rank ?? null
         );
         const { strategy, detail } = classifyWalletStrategy({
           trades,
-          pnl: monthPnl,
+          pnl: fullPnl,
           firstBuy,
           percentOfSupply: holder?.percentOfSupply ?? null,
           intelScore: intel,
@@ -233,8 +344,20 @@ export async function scanProAlphaTargets(
         if (firstBuy?.inSnipeWindow) {
           reasons.push("Bought in launch snipe window (≤30m from first buyer)");
         }
-        if ((monthPnl.totalPnlUsd ?? 0) > 0) {
-          reasons.push("Positive 30d PnL on token");
+        if ((pnlCurrent.totalPnlUsd ?? 0) > 0) {
+          reasons.push(
+            `Total PnL incl. bag: realized + unrealized on current position`
+          );
+        }
+        if ((pnlCurrent.unrealizedPnlUsd ?? 0) > 0) {
+          reasons.push("Unrealized gains on open position");
+        }
+        if (pnlCurrent.position > 0) {
+          reasons.push(
+            holder?.percentOfSupply != null && holder.percentOfSupply >= 0.1
+              ? `Still holding ${holder.percentOfSupply.toFixed(2)}% of supply`
+              : "Still holding token balance"
+          );
         }
         if (strategy === "ALPHA LEADER" || strategy === "EARLY BUYER") {
           reasons.push("Consistently early on this token");
@@ -255,7 +378,9 @@ export async function scanProAlphaTargets(
           intelScore: intel,
           trackScore: trackScore(
             intel,
-            monthPnl.totalPnlUsd,
+            pnlCurrent.totalPnlUsd,
+            pnlCurrent.unrealizedPnlUsd,
+            pnlCurrent.positionUsd,
             firstBuy?.firstMoverScore ?? 0,
             firstBuy?.followers30m ?? 0
           ),
@@ -264,9 +389,10 @@ export async function scanProAlphaTargets(
           minsAfterFirstBuyer: firstBuy?.minsAfterFirstBuyer ?? null,
           minsBehindLeader: firstBuy?.minsBehindLeader ?? null,
           buyRank: firstBuy?.buyRank ?? null,
-          pnlDay: windowPnl(txs, wallet, txDecimals, priceUsd, 1),
-          pnlWeek: windowPnl(txs, wallet, txDecimals, priceUsd, 7),
-          pnlMonth: windowPnl(txs, wallet, txDecimals, priceUsd, 30),
+          pnlCurrent,
+          pnlDay: windowPnl(txs, wallet, txDecimals, priceUsd, holder, 1),
+          pnlWeek: windowPnl(txs, wallet, txDecimals, priceUsd, holder, 7),
+          pnlMonth: windowPnl(txs, wallet, txDecimals, priceUsd, holder, 30),
           markers: tradeMarkers(txs, wallet, txDecimals),
           trackReasons: reasons,
         } satisfies ProTrackWallet;
