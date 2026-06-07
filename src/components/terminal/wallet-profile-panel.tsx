@@ -2,7 +2,13 @@
 
 import { useState } from "react";
 import type { WalletProfile } from "@/lib/analyze/types";
-import { formatPercent, formatPnlValue, formatUsd, truncateAddress } from "@/lib/ethereum";
+import {
+  formatPercent,
+  formatPnlValue,
+  formatTokenAmount,
+  formatUsd,
+  truncateAddress,
+} from "@/lib/ethereum";
 import { PnlCurrencyToggle } from "@/components/terminal/pnl-currency-toggle";
 import { fetchWalletNetwork } from "@/lib/terminal/phase-actions";
 import { elapsedMs, startTimer } from "@/lib/timing";
@@ -108,7 +114,7 @@ export function WalletProfilePanel({ profile }: { profile: WalletProfile }) {
                 <span className="text-[var(--text-secondary)]">
                   {new Date(trade.timestamp).toLocaleDateString()}
                 </span>
-                <span>{trade.tokenAmount.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
+                <span>{formatTokenAmount(trade.tokenAmount)}</span>
               </div>
             ))
           )}
@@ -127,7 +133,7 @@ export function WalletProfilePanel({ profile }: { profile: WalletProfile }) {
         </p>
         <div className="grid grid-cols-2 gap-2">
           <Stat label="STATUS" value={profile.pnl.status} />
-          <Stat label="POSITION" value={profile.pnl.position.toLocaleString()} />
+          <Stat label="POSITION" value={formatTokenAmount(profile.pnl.position)} />
           <Stat
             label="ENTRY"
             value={formatPnlValue(profile.pnl.averageEntryUsd, pnlCurrency, ethPriceUsd)}

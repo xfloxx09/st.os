@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import type { WalletTrackSnapshot } from "@/lib/analyze/types";
-import { formatUsd, truncateAddress } from "@/lib/ethereum";
+import { formatTokenAmount, formatUsd, truncateAddress } from "@/lib/ethereum";
 import { fetchTrackRefresh } from "@/lib/terminal/phase-actions";
 import { elapsedMs, startTimer } from "@/lib/timing";
 import { useAppStore, walletTrackKey } from "@/stores/app-store";
@@ -111,7 +111,7 @@ export function WalletTrackerPanel({
                 <span className="text-[var(--text-secondary)]">
                   {new Date(trade.timestamp).toLocaleDateString()}
                 </span>
-                <span>{trade.tokenAmount.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
+                <span>{formatTokenAmount(trade.tokenAmount)}</span>
               </div>
             ))
           )}
@@ -147,7 +147,7 @@ export function WalletTrackerPanel({
             snapshot.portfolio.slice(0, 10).map((h) => (
               <div key={h.address} className="flex justify-between gap-2">
                 <span>
-                  {h.symbol} · {h.balance.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                  {h.symbol} · {formatTokenAmount(h.balance)}
                 </span>
                 <span className="text-[var(--text-secondary)]">{formatUsd(h.usdValue)}</span>
               </div>
