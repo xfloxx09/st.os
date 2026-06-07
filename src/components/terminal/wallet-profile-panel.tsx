@@ -10,6 +10,7 @@ import {
   truncateAddress,
 } from "@/lib/ethereum";
 import { PnlCurrencyToggle } from "@/components/terminal/pnl-currency-toggle";
+import { WalletAddressLabel } from "@/components/terminal/wallet-address-label";
 import { fetchWalletNetwork } from "@/lib/terminal/phase-actions";
 import { elapsedMs, startTimer } from "@/lib/timing";
 import { networkResultKey, useAppStore } from "@/stores/app-store";
@@ -46,9 +47,11 @@ export function WalletProfilePanel({ profile }: { profile: WalletProfile }) {
     <div className="space-y-4 text-[11px]">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <div className="text-[var(--accent)]">
-            {truncateAddress(profile.walletAddress, 6)}
-          </div>
+          <WalletAddressLabel
+            address={profile.walletAddress}
+            walletAge={profile.walletAge}
+            truncateLen={6}
+          />
           <div className="text-[10px] text-[var(--text-secondary)]">
             ANALYZING {profile.contractAddress.slice(0, 10)}...
           </div>

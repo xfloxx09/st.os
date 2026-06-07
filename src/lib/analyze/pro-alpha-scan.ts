@@ -24,9 +24,17 @@ import { fetchTokenTransfers } from "@/lib/alchemy";
 import { fetchTokenTransactions } from "@/lib/etherscan-wallet";
 import { normalizeAddress } from "@/lib/ethereum";
 import { getAddressLabel, shouldExcludeHolder } from "@/lib/labels";
+import { resolveWalletAges } from "@/lib/analyze/wallet-freshness";
+import type { WalletAge } from "@/lib/analyze/types";
 
 const SCAN_LIMIT = 10;
 const BATCH = 2;
+
+const UNKNOWN_WALLET_AGE: WalletAge = {
+  kind: "UNKNOWN",
+  firstTxAt: null,
+  ageDays: null,
+};
 
 function sinceMs(days: number): number {
   return Date.now() - days * 24 * 60 * 60 * 1000;
@@ -239,6 +247,9 @@ export async function scanProAlphaTargets(
   const normalized = normalizeAddress(contractAddress);
   const decimals = overview.decimals;
   const priceUsd = overview.priceUsd;
+  const deployer = overview.deployer
+    ? normalizeAddress(overview.deployer)
+    : null;
 
   const transfers = await fetchTokenTransfers(normalized, 600).catch(() => []);
   let transferRows = transfers
@@ -365,6 +376,12 @@ export async function scanProAlphaTargets(
         if (holder && holder.rank <= 15) {
           reasons.push(`Top ${holder.rank} holder`);
         }
+        const isDeployer = deployer
+          ? normalizeAddress(wallet) === deployer
+          : false;
+        if (isDeployer) {
+          reasons.unshift("Token deployer wallet");
+        }
 
         return {
           rank: 0,
@@ -372,6 +389,8 @@ export async function scanProAlphaTargets(
           label: holder?.label ?? getAddressLabel(wallet),
           holderRank: holder?.rank ?? null,
           percentOfSupply: holder?.percentOfSupply ?? null,
+          isDeployer,
+          walletAge: UNKNOWN_WALLET_AGE,
           strategy,
           strategyDetail: detail,
           preferredWindow,
@@ -405,10 +424,29 @@ export async function scanProAlphaTargets(
     if (wallets.length >= SCAN_LIMIT) break;
   }
 
-  const trackWallets = wallets
+  let trackWallets = wallets
     .sort((a, b) => b.trackScore - a.trackScore)
     .slice(0, SCAN_LIMIT)
     .map((w, index) => ({ ...w, rank: index + 1 }));
+
+  const ageMap: Record<string, WalletAge> = await resolveWalletAges(
+    trackWallets.map((w) => w.address),
+    4
+  ).catch(() => ({} as Record<string, WalletAge>));
+
+  trackWallets = trackWallets.map((w) => {
+    const walletAge =
+      ageMap[w.address.toLowerCase()] ?? UNKNOWN_WALLET_AGE;
+    const trackReasons = [...w.trackReasons];
+    if (walletAge.kind === "FRESH") {
+      trackReasons.push(
+        `Fresh wallet (${walletAge.ageDays ?? "<30"}d since first on-chain tx)`
+      );
+    } else if (walletAge.kind === "OLD" && walletAge.ageDays != null) {
+      trackReasons.push(`Established wallet (${walletAge.ageDays}d on-chain)`);
+    }
+    return { ...w, walletAge, trackReasons };
+  });
 
   const leaders = trackWallets.filter(
     (w) => w.strategy === "ALPHA LEADER" || w.strategy === "EARLY BUYER"
@@ -422,6 +460,7 @@ export async function scanProAlphaTargets(
   return {
     contractAddress: normalized,
     tokenSymbol: overview.symbol,
+    deployer,
     trackWallets,
     chartPoints,
     summary,

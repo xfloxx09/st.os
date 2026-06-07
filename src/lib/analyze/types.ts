@@ -23,6 +23,14 @@ export interface TokenOverview {
   riskFlags: RiskFlag[];
 }
 
+export type WalletAgeKind = "FRESH" | "OLD" | "UNKNOWN";
+
+export interface WalletAge {
+  kind: WalletAgeKind;
+  firstTxAt: string | null;
+  ageDays: number | null;
+}
+
 export interface HolderEntry {
   rank: number;
   address: string;
@@ -31,6 +39,7 @@ export interface HolderEntry {
   percentOfSupply: number;
   usdValue: number | null;
   excluded: boolean;
+  walletAge?: WalletAge;
 }
 
 export interface HoldersMeta {
@@ -93,6 +102,7 @@ export interface WalletProfile {
   walletAddress: string;
   contractAddress: string;
   fundOrigin: FundOrigin;
+  walletAge: WalletAge;
   trades: TokenTrade[];
   portfolio: PortfolioHolding[];
   pnl: WalletPnl;
@@ -279,6 +289,7 @@ export interface ExposedWallet {
   reasons: string[];
   flags: string[];
   sharedFundWith: string[];
+  walletAge?: WalletAge;
 }
 
 /** @deprecated use ExposedWallet */
@@ -357,6 +368,8 @@ export interface ProTrackWallet {
   label: string | null;
   holderRank: number | null;
   percentOfSupply: number | null;
+  isDeployer: boolean;
+  walletAge: WalletAge;
   strategy: WalletStrategy;
   strategyDetail: string;
   preferredWindow: string;
@@ -375,9 +388,27 @@ export interface ProTrackWallet {
   trackReasons: string[];
 }
 
+export interface ProAlphaAiBrief {
+  tokenVerdict: string;
+  watchFirst: string[];
+  redFlags: string[];
+  walletNotes: Array<{ address: string; note: string }>;
+  narrative: string;
+}
+
+export interface ProAlphaAiResult {
+  contractAddress: string;
+  tokenSymbol: string | null;
+  deployer: string | null;
+  brief: ProAlphaAiBrief;
+  fetchedAt: string;
+  cached: boolean;
+}
+
 export interface ProAlphaScanResult {
   contractAddress: string;
   tokenSymbol: string | null;
+  deployer: string | null;
   trackWallets: ProTrackWallet[];
   chartPoints: TokenChartPoint[];
   summary: string;

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { WalletProfile } from "@/lib/analyze/types";
+import { WalletAddressLabel } from "@/components/terminal/wallet-address-label";
 import {
   formatPercent,
   formatPnlValue,
@@ -272,11 +273,21 @@ export function WalletHubPanel({
       <div className="border border-[var(--border)] bg-[var(--bg)] p-3">
         <div className="flex flex-wrap items-start justify-between gap-2">
           <div>
-            <div className="text-sm text-[var(--accent)]">{displayName}</div>
+            <WalletAddressLabel
+              address={walletAddress}
+              label={displayName !== truncateAddress(walletAddress, 6) ? displayName : null}
+              aliases={walletAliases}
+              walletAge={profile.walletAge}
+              truncateLen={8}
+              className="text-sm text-[var(--accent)]"
+            />
             <div className="text-[9px] text-[var(--text-secondary)]">
               {truncateAddress(walletAddress, 8)}
               {holderRank ? ` · holder #${holderRank}` : ""}
               {percentOfSupply != null ? ` · ${percentOfSupply.toFixed(2)}% supply` : ""}
+              {profile.walletAge?.ageDays != null
+                ? ` · ${profile.walletAge.ageDays}d on-chain`
+                : ""}
             </div>
           </div>
           <div className="text-right">

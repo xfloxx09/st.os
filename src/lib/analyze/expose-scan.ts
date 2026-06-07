@@ -4,9 +4,11 @@ import type {
   HolderEntry,
   SharedFundSource,
   TokenOverview,
+  WalletAge,
 } from "@/lib/analyze/types";
 import { traceTokenFunds } from "@/lib/analyze/fund-tracer";
 import { fetchTopTraders } from "@/lib/analyze/token-traders";
+import { resolveWalletAges } from "@/lib/analyze/wallet-freshness";
 import { normalizeAddress } from "@/lib/ethereum";
 import { getAddressLabel } from "@/lib/labels";
 
@@ -189,6 +191,44 @@ export async function scanForExposedWallets(
     overview.decimals,
     overview.priceUsd
   ).catch(() => []);
+
+  const ageMap: Record<string, WalletAge> = await resolveWalletAges(
+    exposedWallets.map((w) => w.address),
+    4
+  ).catch(() => ({} as Record<string, WalletAge>));
+
+  exposedWallets = exposedWallets.map((wallet) => {
+    const walletAge =
+      ageMap[wallet.address.toLowerCase()] ?? {
+        kind: "UNKNOWN" as const,
+        firstTxAt: null,
+        ageDays: null,
+      };
+    const flags = [...wallet.flags];
+    const reasons = [...wallet.reasons];
+
+    if (walletAge.kind === "FRESH") {
+      flags.push("FRESH_WALLET");
+      reasons.push(
+        `Fresh wallet on-chain (${walletAge.ageDays ?? "<30"}d since first tx)`
+      );
+    }
+
+    return {
+      ...wallet,
+      walletAge,
+      flags: [...new Set(flags)],
+      reasons,
+      exposeScore:
+        walletAge.kind === "FRESH"
+          ? Math.min(100, wallet.exposeScore + 10)
+          : wallet.exposeScore,
+      tier:
+        walletAge.kind === "FRESH"
+          ? exposeTier(Math.min(100, wallet.exposeScore + 10))
+          : wallet.tier,
+    };
+  });
 
   const critical = exposedWallets.filter((f) => f.tier === "CRITICAL").length;
   const high = exposedWallets.filter((f) => f.tier === "HIGH").length;

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { generateProAlphaBrief } from "@/lib/ai/pro-alpha-brief";
 import { loadCaAnalysis } from "@/lib/analyze/load-ca-analysis";
-import { scanProAlphaTargets } from "@/lib/analyze/pro-alpha-scan";
-import type { ProAlphaScanResult } from "@/lib/analyze/types";
+import type { ProAlphaAiResult, ProAlphaScanResult } from "@/lib/analyze/types";
 import { hasActiveSubscription } from "@/lib/billing/subscription";
 import { getAuthSession } from "@/lib/auth/session";
 import {
@@ -11,7 +11,7 @@ import {
 import { isValidEthAddress, normalizeAddress } from "@/lib/ethereum";
 import { checkRateLimit, rateLimitErrorMessage } from "@/lib/rate-limit";
 
-export const maxDuration = 120;
+export const maxDuration = 60;
 
 export async function GET(request: NextRequest) {
   const session = await getAuthSession();
@@ -30,19 +30,19 @@ export async function GET(request: NextRequest) {
 
   if (!isPro) {
     return NextResponse.json(
-      { error: "EXPOSED.OS Pro required for alpha track scan. See /pricing" },
+      { error: "EXPOSED.OS Pro required for AI brief. See /pricing" },
       { status: 402 }
     );
   }
 
   const normalized = normalizeAddress(contract);
-  const cacheKey = `${normalized}|pro_alpha|v4`;
+  const cacheKey = `${normalized}|pro_alpha_ai|v1`;
   const skipCache = request.nextUrl.searchParams.get("refresh") === "1";
 
   if (!skipCache) {
-    const cached = await getCachedWalletData<ProAlphaScanResult>(
+    const cached = await getCachedWalletData<ProAlphaAiResult>(
       cacheKey,
-      "pro_alpha"
+      "pro_alpha_ai"
     );
     if (cached) {
       return NextResponse.json({ ...cached, cached: true });
@@ -58,16 +58,34 @@ export async function GET(request: NextRequest) {
   }
 
   try {
+    const scanKey = `${normalized}|pro_alpha|v4`;
+    let scan = await getCachedWalletData<ProAlphaScanResult>(scanKey, "pro_alpha");
     const analysis = await loadCaAnalysis(normalized, { isPro: true });
-    const result = await scanProAlphaTargets(
-      normalized,
-      analysis.overview,
-      analysis.holders
-    );
-    await setCachedWalletData(cacheKey, "pro_alpha", result);
+
+    if (!scan) {
+      const { scanProAlphaTargets } = await import("@/lib/analyze/pro-alpha-scan");
+      scan = await scanProAlphaTargets(
+        normalized,
+        analysis.overview,
+        analysis.holders
+      );
+      await setCachedWalletData(scanKey, "pro_alpha", scan);
+    }
+
+    const brief = await generateProAlphaBrief(scan, analysis.overview);
+    const result: ProAlphaAiResult = {
+      contractAddress: normalized,
+      tokenSymbol: scan.tokenSymbol,
+      deployer: scan.deployer,
+      brief,
+      fetchedAt: new Date().toISOString(),
+      cached: false,
+    };
+
+    await setCachedWalletData(cacheKey, "pro_alpha_ai", result);
     return NextResponse.json(result);
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Pro alpha scan failed";
+    const message = err instanceof Error ? err.message : "AI brief failed";
     return NextResponse.json({ error: message }, { status: 502 });
   }
 }

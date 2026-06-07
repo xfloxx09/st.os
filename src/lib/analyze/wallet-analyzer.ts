@@ -16,12 +16,20 @@ import type {
   FundOrigin,
   PortfolioHolding,
   TokenTrade,
+  WalletAge,
   WalletPnl,
   WalletProfile,
 } from "@/lib/analyze/types";
+import { resolveWalletAge } from "@/lib/analyze/wallet-freshness";
 
 const MIN_ETH_INFLOW = 0.05;
 const MAX_FUND_HOPS = 5;
+
+const UNKNOWN_WALLET_AGE: WalletAge = {
+  kind: "UNKNOWN",
+  firstTxAt: null,
+  ageDays: null,
+};
 
 function weiToEth(wei: string): number {
   return Number(wei) / 1e18;
@@ -252,13 +260,17 @@ export async function analyzeWalletOverview(
   walletAddress: string
 ): Promise<WalletProfile> {
   const wallet = normalizeAddress(walletAddress);
-  const fundOrigin = await traceFundOrigin(wallet);
-  const portfolio = await buildPortfolio(wallet);
+  const [fundOrigin, portfolio, walletAge] = await Promise.all([
+    traceFundOrigin(wallet),
+    buildPortfolio(wallet),
+    resolveWalletAge(wallet).catch(() => UNKNOWN_WALLET_AGE),
+  ]);
 
   return {
     walletAddress: wallet,
     contractAddress: wallet,
     fundOrigin,
+    walletAge,
     trades: [],
     portfolio,
     pnl: {
@@ -285,10 +297,11 @@ export async function analyzeWallet(
   const wallet = normalizeAddress(walletAddress);
   const contract = normalizeAddress(contractAddress);
 
-  const [fundOrigin, tokenTxs, dex] = await Promise.all([
+  const [fundOrigin, tokenTxs, dex, walletAge] = await Promise.all([
     traceFundOrigin(wallet),
     fetchTokenTransactions(wallet, contract, 1, 100).catch(() => []),
     fetchDexTokenData(contract).catch(() => null),
+    resolveWalletAge(wallet).catch(() => UNKNOWN_WALLET_AGE),
   ]);
 
   const decimals = Number(tokenTxs[0]?.tokenDecimal ?? "18");
@@ -302,6 +315,7 @@ export async function analyzeWallet(
     walletAddress: wallet,
     contractAddress: contract,
     fundOrigin,
+    walletAge,
     trades,
     portfolio,
     pnl,

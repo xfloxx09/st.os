@@ -320,6 +320,8 @@ export function Workspace() {
 
                     contractAddress={analysis.contractAddress}
 
+                    deployerAddress={analysis.overview.deployer}
+
                     holdersMeta={analysis.holdersMeta}
 
                   />

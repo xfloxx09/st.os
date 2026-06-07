@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import type { ExposedWallet, HolderEntry, TraderEntry } from "@/lib/analyze/types";
-import { formatPnlValue, formatUsd, truncateAddress } from "@/lib/ethereum";
+import { formatPnlValue, formatUsd } from "@/lib/ethereum";
 import { PnlCurrencyToggle } from "@/components/terminal/pnl-currency-toggle";
 import { elapsedMs, startTimer } from "@/lib/timing";
 import {
@@ -12,7 +12,14 @@ import {
   fetchFundTrace,
 } from "@/lib/terminal/phase-actions";
 import { ProTrackPanel } from "@/components/terminal/pro-track-panel";
+import {
+  WalletAddressLabel,
+  walletDisplayName,
+} from "@/components/terminal/wallet-address-label";
+import { fetchWalletAges } from "@/lib/terminal/phase-actions";
 import { networkResultKey, useAppStore } from "@/stores/app-store";
+import type { WalletAge } from "@/lib/analyze/types";
+import { normalizeAddress } from "@/lib/ethereum";
 
 type Tab = "holders" | "traders" | "exposed" | "pro";
 
@@ -29,27 +36,17 @@ const TIER_COLOR: Record<ExposedWallet["tier"], string> = {
   LOW: "var(--text-secondary)",
 };
 
-function walletDisplayName(
-  address: string,
-  label: string | null,
-  aliases: Record<string, string>
-): string {
-  return (
-    aliases[address.toLowerCase()] ??
-    label ??
-    truncateAddress(address)
-  );
-}
-
 export function HolderRosterPanel({
   holders,
   allHolders,
   contractAddress,
+  deployerAddress,
   holdersMeta,
 }: {
   holders: HolderEntry[];
   allHolders: HolderEntry[];
   contractAddress: string;
+  deployerAddress?: string | null;
   holdersMeta?: {
     source: string;
     totalRaw: number;
@@ -67,6 +64,7 @@ export function HolderRosterPanel({
   const [scanLoading, setScanLoading] = useState(false);
   const [exposeScanError, setExposeScanError] = useState<string | null>(null);
   const [showFiltered, setShowFiltered] = useState(false);
+  const [walletAges, setWalletAges] = useState<Record<string, WalletAge>>({});
 
   const user = useAppStore((s) => s.user);
   const walletAliases = useAppStore((s) => s.walletAliases);
@@ -85,6 +83,10 @@ export function HolderRosterPanel({
   const pnlCurrency = useAppStore((s) => s.pnlCurrency);
   const ethPriceUsd = useAppStore((s) => s.ethPriceUsd);
 
+  const deployer = deployerAddress
+    ? normalizeAddress(deployerAddress).toLowerCase()
+    : null;
+
   const excludedCount = allHolders.length - holders.length;
   const filteredHolders = allHolders.filter((h) => h.excluded);
   const canAct = Boolean(user);
@@ -95,6 +97,29 @@ export function HolderRosterPanel({
 
   const exposedWallets = exposeScan?.exposedWallets ?? [];
   const traders = exposeScan?.traders ?? [];
+
+  useEffect(() => {
+    if (!user) return;
+    const addresses = [
+      ...holders.slice(0, 60).map((h) => h.address),
+      ...exposedWallets.slice(0, 20).map((e) => e.address),
+      ...traders.slice(0, 15).map((t) => t.address),
+    ];
+    const unique = [...new Set(addresses.map((a) => a.toLowerCase()))];
+    if (unique.length === 0) return;
+
+    let cancelled = false;
+    void fetchWalletAges(unique)
+      .then((ages) => {
+        if (!cancelled) setWalletAges((prev) => ({ ...prev, ...ages }));
+      })
+      .catch(() => {});
+
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [contractAddress, holders.length, exposedWallets.length, traders.length, user]);
 
   const openWallet = (
     address: string,
@@ -311,8 +336,17 @@ export function HolderRosterPanel({
                       <td className="py-1.5 pr-2 text-[var(--text-secondary)]">
                         {holder.rank}
                       </td>
-                      <td className="py-1.5 pr-2 text-[var(--accent)]">
-                        {walletDisplayName(holder.address, holder.label, walletAliases)}
+                      <td className="py-1.5 pr-2">
+                        <WalletAddressLabel
+                          address={holder.address}
+                          label={holder.label}
+                          aliases={walletAliases}
+                          walletAge={
+                            walletAges[holder.address.toLowerCase()] ??
+                            holder.walletAge
+                          }
+                          isDeployer={deployer === holder.address.toLowerCase()}
+                        />
                       </td>
                       <td className="py-1.5 pr-2 text-right">
                         {formatPercent(holder.percentOfSupply)}
@@ -368,8 +402,13 @@ export function HolderRosterPanel({
                     <td className="py-1.5 pr-2 text-[var(--text-secondary)]">
                       {trader.rank}
                     </td>
-                    <td className="py-1.5 pr-2 text-[var(--accent)]">
-                      {walletDisplayName(trader.address, trader.label, walletAliases)}
+                    <td className="py-1.5 pr-2">
+                      <WalletAddressLabel
+                        address={trader.address}
+                        label={trader.label}
+                        aliases={walletAliases}
+                        walletAge={walletAges[trader.address.toLowerCase()]}
+                      />
                     </td>
                     <td
                       className={`py-1.5 pr-2 text-right ${
@@ -425,8 +464,18 @@ export function HolderRosterPanel({
                     <td className="py-1.5 pr-2 text-[var(--text-secondary)]">
                       {index + 1}
                     </td>
-                    <td className="py-1.5 pr-2 text-[var(--warning)]">
-                      {walletDisplayName(exposed.address, exposed.label, walletAliases)}
+                    <td className="py-1.5 pr-2">
+                      <WalletAddressLabel
+                        address={exposed.address}
+                        label={exposed.label}
+                        aliases={walletAliases}
+                        walletAge={
+                          exposed.walletAge ??
+                          walletAges[exposed.address.toLowerCase()]
+                        }
+                        isDeployer={exposed.flags.includes("DEPLOYER")}
+                        className="text-[var(--warning)]"
+                      />
                     </td>
                     <td className="py-1.5 pr-2 text-right">
                       <span style={{ color: TIER_COLOR[exposed.tier] }}>

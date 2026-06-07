@@ -5,6 +5,7 @@ import type {
   CaAnalysisResult,
   CrossAnalysisResult,
   ExposeScanResult,
+  ProAlphaAiResult,
   ProAlphaScanResult,
   FundTraceResult,
   WalletNetworkResult,
@@ -210,6 +211,8 @@ interface AppState {
 
   proAlphaResults: Record<string, ProAlphaScanResult>;
 
+  proAlphaAiResults: Record<string, ProAlphaAiResult>;
+
   crossCompareSelection: string[];
 
   lastQueryMs: number | null;
@@ -286,6 +289,8 @@ interface AppState {
   setBulkExpose: (contractAddress: string, result: BulkExposeResult) => void;
 
   setProAlphaScan: (contractAddress: string, result: ProAlphaScanResult) => void;
+
+  setProAlphaAi: (contractAddress: string, result: ProAlphaAiResult) => void;
 
   toggleCrossCompare: (contractAddress: string) => void;
 
@@ -481,6 +486,8 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   proAlphaResults: {},
 
+  proAlphaAiResults: {},
+
   crossCompareSelection: [],
 
   lastQueryMs: null,
@@ -623,6 +630,14 @@ export const useAppStore = create<AppState>((set, get) => ({
     set((s) => ({
 
       proAlphaResults: { ...s.proAlphaResults, [contractAddress]: result },
+
+    })),
+
+  setProAlphaAi: (contractAddress, result) =>
+
+    set((s) => ({
+
+      proAlphaAiResults: { ...s.proAlphaAiResults, [contractAddress]: result },
 
     })),
 

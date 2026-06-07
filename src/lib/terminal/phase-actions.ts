@@ -3,8 +3,10 @@ import type {
   BulkExposeResult,
   CrossAnalysisResult,
   ExposeScanResult,
+  ProAlphaAiResult,
   ProAlphaScanResult,
   FundTraceResult,
+  WalletAge,
   WalletNetworkResult,
   WalletProfile,
   WalletTrackSnapshot,
@@ -72,6 +74,28 @@ export async function fetchProAlphaScan(
   const params = new URLSearchParams({ contract: contractAddress });
   if (options?.refresh) params.set("refresh", "1");
   return apiGet(`/api/analyze/pro-alpha?${params}`);
+}
+
+export async function fetchProAlphaAi(
+  contractAddress: string,
+  options?: { refresh?: boolean }
+): Promise<ProAlphaAiResult> {
+  const params = new URLSearchParams({ contract: contractAddress });
+  if (options?.refresh) params.set("refresh", "1");
+  return apiGet(`/api/analyze/pro-alpha/ai?${params}`);
+}
+
+export async function fetchWalletAges(
+  addresses: string[]
+): Promise<Record<string, WalletAge>> {
+  if (addresses.length === 0) return {};
+  const params = new URLSearchParams({
+    addresses: addresses.join(","),
+  });
+  const res = await apiGet<{ ages: Record<string, WalletAge> }>(
+    `/api/analyze/wallet-ages?${params}`
+  );
+  return res.ages;
 }
 
 export async function fetchBulkExpose(
