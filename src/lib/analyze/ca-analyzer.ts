@@ -1,9 +1,9 @@
 import {
   fetchContractCreation,
   fetchContractSource,
-  fetchTokenHolders,
   fetchTokenInfo,
 } from "@/lib/etherscan";
+import { fetchTopHolders } from "@/lib/holders";
 import { fetchDexTokenData } from "@/lib/dexscreener";
 import { checkHoneypot } from "@/lib/honeypot";
 import {
@@ -65,15 +65,21 @@ export async function analyzeContractAddress(
 ): Promise<CaAnalysisResult> {
   const address = normalizeAddress(contractAddress);
 
-  const [tokenInfo, dex, creation, source, honeypot, rawHolders] =
+  const [tokenInfo, dex, creation, source, honeypot, holderResult] =
     await Promise.all([
       fetchTokenInfo(address).catch(() => null),
       fetchDexTokenData(address).catch(() => null),
       fetchContractCreation(address).catch(() => null),
       fetchContractSource(address).catch(() => null),
       checkHoneypot(address),
-      fetchTokenHolders(address, 1, 100).catch(() => []),
+      fetchTopHolders(address, 100).catch(() => ({
+        holders: [],
+        source: "blockscout" as const,
+        warning: "Failed to fetch holders",
+      })),
     ]);
+
+  const rawHolders = holderResult.holders;
 
   const decimals = Number(tokenInfo?.divisor ?? "18");
   const totalSupplyRaw = tokenInfo?.totalSupply ?? "0";
@@ -102,12 +108,12 @@ export async function analyzeContractAddress(
   };
 
   const allHolders: HolderEntry[] = rawHolders.map((holder, index) => {
-    const holderAddress = normalizeAddress(holder.TokenHolderAddress);
-    const balanceRaw = Number(holder.TokenHolderQuantity);
+    const holderAddress = holder.address;
+    const balanceRaw = Number(holder.quantity);
     const balance = balanceRaw / 10 ** decimals;
     const percentOfSupply =
       totalSupplyNum > 0 ? (balance / totalSupplyNum) * 100 : 0;
-    const label = getAddressLabel(holderAddress);
+    const label = holder.label ?? getAddressLabel(holderAddress);
     const excluded = shouldExcludeHolder(holderAddress, address);
 
     return {
@@ -123,11 +129,26 @@ export async function analyzeContractAddress(
 
   const holders = allHolders.filter((h) => !h.excluded);
 
+  if (holderResult.warning) {
+    overview.riskFlags.push({
+      level: "info",
+      code: "HOLDER_SOURCE",
+      message: holderResult.warning,
+    });
+  }
+
   return {
     contractAddress: address,
     overview,
     holders,
     allHolders,
+    holdersMeta: {
+      source: holderResult.source,
+      totalRaw: allHolders.length,
+      analyzable: holders.length,
+      filtered: allHolders.length - holders.length,
+      warning: holderResult.warning,
+    },
     fetchedAt: new Date().toISOString(),
     cached: false,
   };

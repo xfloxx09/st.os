@@ -101,6 +101,7 @@ export function Workspace() {
                     holders={analysis.holders}
                     allHolders={analysis.allHolders}
                     contractAddress={analysis.contractAddress}
+                    holdersMeta={analysis.holdersMeta}
                   />
                 ) : panel.type === "WALLET_PROFILE" && walletProfile ? (
                   <WalletProfilePanel profile={walletProfile} />

@@ -33,11 +33,20 @@ export interface HolderEntry {
   excluded: boolean;
 }
 
+export interface HoldersMeta {
+  source: "etherscan" | "blockscout";
+  totalRaw: number;
+  analyzable: number;
+  filtered: number;
+  warning?: string;
+}
+
 export interface CaAnalysisResult {
   contractAddress: string;
   overview: TokenOverview;
   holders: HolderEntry[];
   allHolders: HolderEntry[];
+  holdersMeta?: HoldersMeta;
   fetchedAt: string;
   cached: boolean;
 }

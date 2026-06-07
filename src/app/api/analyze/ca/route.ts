@@ -50,10 +50,13 @@ export async function GET(request: NextRequest) {
   let result: CaAnalysisResult | null = null;
 
   if (!skipCache) {
-    result = await getCachedWalletData<CaAnalysisResult>(
+    const cached = await getCachedWalletData<CaAnalysisResult>(
       normalized,
       "ca_analysis"
     );
+    if (cached && cached.allHolders.length > 0) {
+      result = cached;
+    }
   }
 
   if (!result) {

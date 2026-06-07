@@ -14,10 +14,18 @@ export function HolderRosterPanel({
   holders,
   allHolders,
   contractAddress,
+  holdersMeta,
 }: {
   holders: HolderEntry[];
   allHolders: HolderEntry[];
   contractAddress: string;
+  holdersMeta?: {
+    source: string;
+    totalRaw: number;
+    analyzable: number;
+    filtered: number;
+    warning?: string;
+  };
 }) {
   const [loadingWallet, setLoadingWallet] = useState<string | null>(null);
   const guest = useAppStore((s) => s.guest);
@@ -72,6 +80,7 @@ export function HolderRosterPanel({
         <span>
           {holders.length} ANALYZABLE HOLDERS
           {excludedCount > 0 ? ` · ${excludedCount} filtered (CEX/DEX/burn)` : ""}
+          {holdersMeta ? ` · via ${holdersMeta.source}` : ""}
         </span>
         {guest ? (
           <span className="text-[var(--warning)]">STALK REQUIRES TELEGRAM</span>
@@ -95,7 +104,9 @@ export function HolderRosterPanel({
             {holders.length === 0 ? (
               <tr>
                 <td colSpan={5} className="py-6 text-center text-[var(--text-secondary)]">
-                  No analyzable holders found.
+                  {allHolders.length > 0
+                    ? `${allHolders.length} holders loaded but all were filtered (CEX/DEX/bridges). Expand filtered list below.`
+                    : "No holder data returned. Try a different token or refresh."}
                 </td>
               </tr>
             ) : (
