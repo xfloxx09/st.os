@@ -82,9 +82,9 @@ export function ExposeReportPanel({ result }: { result: BulkExposeResult }) {
         <div className="space-y-2 border-t border-[var(--border)] pt-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
-              <div className="text-[var(--accent)]">PRIMARY SYNDICATE MAP</div>
+              <div className="text-[var(--accent)]">STRONGEST LINK CLUSTER</div>
               <div className="text-[10px] text-[var(--text-secondary)]">
-                Seed: {truncateAddress(primary.seedWallet, 6)} · highest network suspicion
+                {truncateAddress(primary.seedWallet, 6)} · most linked wallet
               </div>
               <p className="mt-1 text-[10px]">{primary.summary}</p>
             </div>

@@ -394,7 +394,7 @@ export function Workspace() {
 
                   <p className="scan-line text-[var(--text-secondary)]">
 
-                    MAPPING WALLET SYNDICATE... TRACING CO-BUYS...
+                    SCANNING CO-BUY LINKS...
 
                   </p>
 

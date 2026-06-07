@@ -1304,7 +1304,7 @@ export const useAppStore = create<AppState>((set, get) => ({
 
           type: "WALLET_NETWORK",
 
-          title: `NETWORK · ${walletAddress.slice(0, 8)}`,
+          title: `LINKS · ${walletAddress.slice(0, 8)}`,
 
           x: 120 + offset,
 

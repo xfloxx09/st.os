@@ -322,7 +322,7 @@ export function WalletHubPanel({
           accent
         />
         <ActionBtn
-          label="MAP NETWORK"
+          label="CO-BUY LINKS"
           onClick={onMapNetwork}
           loading={action === "network"}
           warn

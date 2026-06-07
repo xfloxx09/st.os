@@ -60,7 +60,7 @@ export function WalletProfilePanel({ profile }: { profile: WalletProfile }) {
             disabled={mapping}
             className="mb-1 border border-[var(--warning)] px-2 py-0.5 text-[9px] text-[var(--warning)] disabled:opacity-40"
           >
-            {mapping ? "..." : "MAP NETWORK"}
+            {mapping ? "..." : "CO-BUY LINKS"}
           </button>
           <div className="text-[var(--warning)]">{profile.behaviorLabel}</div>
           <div className="text-[10px] text-[var(--text-secondary)]">
