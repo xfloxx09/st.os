@@ -8,10 +8,9 @@ import { TokenOverviewPanel } from "@/components/terminal/token-overview-panel";
 import { HolderRosterPanel } from "@/components/terminal/holder-roster-panel";
 import { useAppStore } from "@/stores/app-store";
 
-const BOT_USERNAME = process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME ?? "";
-
 export function Workspace() {
   const user = useAppStore((s) => s.user);
+  const botUsername = useAppStore((s) => s.telegramBotUsername);
   const panels = useAppStore((s) => s.panels);
   const analysisByContract = useAppStore((s) => s.analysisByContract);
   const analyzeError = useAppStore((s) => s.analyzeError);
@@ -44,13 +43,14 @@ export function Workspace() {
             <p className="mb-6 text-sm text-[var(--text-secondary)]">
               Connect Telegram to access the forensics terminal.
             </p>
-            {BOT_USERNAME ? (
+            {botUsername ? (
               <div className="flex justify-center">
-                <TelegramLogin botUsername={BOT_USERNAME} />
+                <TelegramLogin botUsername={botUsername} />
               </div>
             ) : (
               <p className="text-[11px] text-[var(--warning)]">
-                Set NEXT_PUBLIC_TELEGRAM_BOT_USERNAME in environment.
+                Set TELEGRAM_BOT_USERNAME or NEXT_PUBLIC_TELEGRAM_BOT_USERNAME on
+                Railway, then redeploy.
               </p>
             )}
           </div>

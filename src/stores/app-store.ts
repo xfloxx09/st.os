@@ -48,12 +48,14 @@ interface AppState {
   analysisByContract: Record<string, CaAnalysisResult>;
   lastQueryMs: number | null;
   analyzeError: string | null;
+  telegramBotUsername: string | null;
   setBootComplete: (value: boolean) => void;
   setUser: (user: SessionUser | null) => void;
   setSearchHistory: (items: SearchHistoryItem[]) => void;
   setActiveProcesses: (count: number) => void;
   setLastQueryMs: (ms: number | null) => void;
   setAnalyzeError: (error: string | null) => void;
+  setTelegramBotUsername: (username: string | null) => void;
   setAnalysis: (contractAddress: string, data: CaAnalysisResult) => void;
   setCurrentContract: (address: string | null) => void;
   toggleSidebar: () => void;
@@ -78,12 +80,14 @@ export const useAppStore = create<AppState>((set) => ({
   analysisByContract: {},
   lastQueryMs: null,
   analyzeError: null,
+  telegramBotUsername: null,
   setBootComplete: (value) => set({ bootComplete: value }),
   setUser: (user) => set({ user }),
   setSearchHistory: (items) => set({ searchHistory: items }),
   setActiveProcesses: (count) => set({ activeProcesses: count }),
   setLastQueryMs: (ms) => set({ lastQueryMs: ms }),
   setAnalyzeError: (error) => set({ analyzeError: error }),
+  setTelegramBotUsername: (username) => set({ telegramBotUsername: username }),
   setAnalysis: (contractAddress, data) =>
     set((s) => ({
       analysisByContract: {

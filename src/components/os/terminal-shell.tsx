@@ -13,7 +13,20 @@ export function TerminalShell() {
   const [showBoot, setShowBoot] = useState(true);
   const setUser = useAppStore((s) => s.setUser);
   const setSearchHistory = useAppStore((s) => s.setSearchHistory);
+  const setTelegramBotUsername = useAppStore((s) => s.setTelegramBotUsername);
   const bootComplete = useAppStore((s) => s.bootComplete);
+
+  const configQuery = useQuery({
+    queryKey: ["config"],
+    queryFn: async () => {
+      const res = await fetch("/api/config");
+      if (!res.ok) return { telegramBotUsername: "", appUrl: "" };
+      return res.json() as Promise<{
+        telegramBotUsername: string;
+        appUrl: string;
+      }>;
+    },
+  });
 
   const sessionQuery = useQuery({
     queryKey: ["session"],
@@ -38,6 +51,12 @@ export function TerminalShell() {
     },
     enabled: bootComplete,
   });
+
+  useEffect(() => {
+    if (configQuery.data?.telegramBotUsername) {
+      setTelegramBotUsername(configQuery.data.telegramBotUsername);
+    }
+  }, [configQuery.data, setTelegramBotUsername]);
 
   useEffect(() => {
     if (sessionQuery.data) {

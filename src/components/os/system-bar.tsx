@@ -3,12 +3,11 @@
 import { TelegramLogin } from "@/components/auth/telegram-login";
 import { useAppStore } from "@/stores/app-store";
 
-const BOT_USERNAME = process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME ?? "";
-
 export function SystemBar() {
   const user = useAppStore((s) => s.user);
   const activeProcesses = useAppStore((s) => s.activeProcesses);
   const toggleSidebar = useAppStore((s) => s.toggleSidebar);
+  const botUsername = useAppStore((s) => s.telegramBotUsername);
 
   const displayName =
     user?.username ? `@${user.username}` : user?.firstName ?? "GUEST";
@@ -34,8 +33,8 @@ export function SystemBar() {
           <span className="text-[var(--text-primary)]">{activeProcesses}</span>
         </span>
         <span className="text-[var(--text-primary)]">{displayName}</span>
-        {!user && BOT_USERNAME ? (
-          <TelegramLogin botUsername={BOT_USERNAME} />
+        {!user && botUsername ? (
+          <TelegramLogin botUsername={botUsername} />
         ) : null}
       </div>
     </header>
