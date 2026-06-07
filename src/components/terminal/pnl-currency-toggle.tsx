@@ -22,10 +22,7 @@ export function PnlCurrencyToggle({ className = "" }: { className?: string }) {
   );
 
   return (
-    <div
-      className={`inline-flex border border-[var(--border)] ${className}`}
-      title="Switch PnL display currency"
-    >
+    <div className={`inline-flex border border-[var(--border)] ${className}`}>
       {btn("eth", "ETH")}
       {btn("usd", "$")}
     </div>
